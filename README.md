@@ -24,3 +24,8 @@ It has a big number of error checking and prevention from breaking (mostly by th
 <h1>Updates</h1>
 <h2>Version 1.3</h2>
 Some radical changes in the structure of the Main.py file. The <b>Window</b> class broken down into multiple classes, each for every individual <b>ttk.Notebook</b> frame. This might result in some bugs, but I hope it won't.
+
+<h1>TO DO</h1>
+1. Enable saving unsent e-mails to a file/database in case of internet connection loss.
+2. Changes in variable names. (Make them more readable and informative)
+3. Some changes to teh structure of the code and maybe some more features.
