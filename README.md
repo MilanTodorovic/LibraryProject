@@ -20,3 +20,7 @@ this little program offers huge advantages.<br>
 I am extremely happy about teh fact, that it can send Emails through our local host and show a progressbar (which is a seperate process, 
 using multiprocessing and queues) of the number of sent Emails.<br>
 It has a big number of error checking and prevention from breaking (mostly by the user).
+
+<h1>Updates</h1>
+<h2>Version 1.3</h2>
+Some radical changes in the structure of the Main.py file. The Window class broke down into multiple classes, each for every individual ttk.Notebook frame. This might result in some bugs, but I hope it won't.
