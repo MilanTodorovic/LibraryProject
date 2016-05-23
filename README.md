@@ -23,4 +23,4 @@ It has a big number of error checking and prevention from breaking (mostly by th
 
 <h1>Updates</h1>
 <h2>Version 1.3</h2>
-Some radical changes in the structure of the Main.py file. The Window class broke down into multiple classes, each for every individual ttk.Notebook frame. This might result in some bugs, but I hope it won't.
+Some radical changes in the structure of the Main.py file. The <b>Window</b> class broken down into multiple classes, each for every individual <b>ttk.Notebook</b> frame. This might result in some bugs, but I hope it won't.
