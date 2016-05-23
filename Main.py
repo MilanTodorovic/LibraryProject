@@ -17,7 +17,6 @@ A tuple of those classes can be found under the init_window method of the Window
 
 # TO DO
 
-# POSLATI SVIMA SESSION I QUEUE
 # prozor za profesore
 # iznajmljivanje knjiga za profesore
 
@@ -204,7 +203,7 @@ class Window(ttk.Frame):
     # MAIN FRAMES FOR ANY FURTHER WINDOWS
     def init_window(self):
 
-        self.master.title("Cirkulacija V1.2.0")
+        self.master.title("Cirkulacija V1.3.0")
         # list of all the frame classes
         self.nb = ttk.Notebook(self)
         FRAME_CLASSES = (FirstFrame, SecondFrame, ThirdFrame, ForthFrame, FifthFrame, SixthFrame)
