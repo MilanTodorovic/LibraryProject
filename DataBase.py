@@ -38,7 +38,7 @@ def data_entry(surname, name, index_num, id_num, jmbg,
               'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', (surname, name, index_num, id_num, jmbg, tel, mob, email, ivalue))
 
     c.execute('INSERT INTO addressStudents(index_num, street, house_num, city, i_value) VALUES '
-              '(?, ? ,? ,?, ?)', (index_num, street, house_num, city, ivalue))
+              '(?, ?, ?, ?, ?)', (index_num, street, house_num, city, ivalue))
 
     conn.commit()
     messagebox.showinfo("Obaveštenje", "Korisnik uspešno unet:\n"+str(name)+" "+str(surname))
@@ -159,7 +159,9 @@ def read_db(index_num=None, name_db = None, surname_db = None, city_db = None, a
             new_data = []
     else:
         # LOADS INFORMATION FOR CORRECTION
-        c.execute('SELECT cirkStudents.*, addressStudents.street,addressStudents.house_num, addressStudents.city '
+        c.execute('SELECT cirkStudents.surname, cirkStudents.name, cirkStudents.id_num, cirkStudents.jmbg, '
+                  'cirkStudents.telephone, cirkStudents.mobile, cirkStudents.email,'
+                  'addressStudents.street, addressStudents.house_num, addressStudents.city '
                   'FROM cirkStudents INNER JOIN addressStudents '
                   'ON addressStudents.index_num = cirkStudents.index_num '
                   'WHERE cirkStudents.index_num = ?', (index_num,))
