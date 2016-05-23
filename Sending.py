@@ -28,7 +28,7 @@ def connecting(username, password, q):
     s = requests.Session()
     s.headers.update({"User-Agent":"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 "
                                    "(KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36"})
-    # payload = {"login_username":"milan.todorovic", "secretkey":"todor1990", "js_autodetect_results":"1", "just_logged_in":"1"}
+
     payload = {"login_username": username, "secretkey": password, "js_autodetect_results": "1",
                "just_logged_in": "1"}
     session_url = url+'login.php'
@@ -73,7 +73,7 @@ def send_email(s, lst, *args):
     global url
 
     print(lst)
-    # recipient = 'danijel.milosevic.dm@gmail.com'
+    # recipient = 'some@email.com'
     recipient = lst[0]
     subject = 'Zaduzenje'
     body = "Postovani/Postovana,\n\n" \
