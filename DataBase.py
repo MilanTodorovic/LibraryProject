@@ -9,11 +9,15 @@ def create_table():
     c.execute('CREATE TABLE IF NOT EXISTS cirkStudents(surname TEXT, name TEXT, index_num TEXT PRIMARY KEY, id_num TEXT, jmbg TEXT,'
               ' telephone TEXT, mobile TEXT, email TEXT, i_value INTEGER)')
     c.execute('CREATE TABLE IF NOT EXISTS addressStudents(index_num TEXT PRIMARY KEY, street TEXT, house_num TEXT, city TEXT, i_value INTEGER)')
-    c.execute('CREATE TABLE IF NOT EXISTS takenBooks(index_num TEXT PRIMARY KEY, title TEXT, author TEXT, sign INTEGER, date_taken TEXT,'
-              'date_bring_back TEXT)')
+    c.execute('CREATE TABLE IF NOT EXISTS takenBooks(index_num TEXT, title TEXT, author TEXT, sign INTEGER, date_taken TEXT,'
+              'date_bring_back TEXT, PRIMARY KEY(index_num, sign))')
     c.execute('CREATE TABLE IF NOT EXISTS dueBooks(index_num TEXT PRIMARY KEY, title TEXT, author TEXT, sign INTEGER, date_taken TEXT, '
               'date_bring_back TEXT)')
     c.execute('CREATE TABLE IF NOT EXISTS generations(index_part TEXT UNIQUE, i_value INTEGER PRIMARY KEY AUTOINCREMENT )')
+    c.execute('CREATE TABLE IF NOT EXISTS lendBookEmails(sign INTEGER PRIMARY KEY)')
+    # type 0 for information, type 1 for warning message
+    c.execute('CREATE TABLE IF NOT EXISTS unsentEmails(email TEXT, type INTEGER, number INTEGER, PRIMARY KEY(email, type))')
+    c.execute('CREATE TABLE IF NOT EXISTS sub_msg_emails(sub TEXT, msg TEXT, number INTEGER PRIMARY KEY)')
 
     c.close()
     conn.close()
@@ -378,6 +382,7 @@ def read_gen():
     else:
         return lst
 
+# Loads due books from DB
 def getDue():
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
@@ -394,6 +399,7 @@ def getDue():
     else:
         return []
 
+# Function for selecting e-mail addresses from certain generation of students
 def read_email(index_num):
 
     conn = sqlite3.connect('cirkulacija.db')
@@ -418,7 +424,108 @@ def deleteTables():
                     'DROP TABLE IF EXISTS addressStudents;'
                     'DROP TABLE IF EXISTS takenBooks;'
                     'DROP TABLE IF EXISTS dueBooks;'
-                    'DROP TABLE IF EXISTS generations')
+                    'DROP TABLE IF EXISTS generations;'
+                    'DROP TABLE IF EXISTS lendBookEmails;'
+                    'DROP TABLE IF EXISTS unsentEmails;'
+                    'DROP TABLE IF EXISTS sub_msg_emails;')
     conn.commit()
     c.close()
     conn.close()
+
+# Stores notifitacion emails for lending a book
+# which couldn't be sent due to not being logged into the email acc
+# or connection problems
+def lendBookEmails(signature):
+    conn = sqlite3.connect('cirkulacija.db')
+    c = conn.cursor()
+
+    c.execute('INSERT OR IGNORE INTO lendBookEmails(sign) VALUES(?)', (signature,))
+
+    conn.commit()
+    c.close()
+    conn.close()
+
+# Deletes entries from lendBookEmails if they were sent later on
+def delete_lendBookEmails(signature):
+    conn = sqlite3.connect('cirkulacija.db')
+    c = conn.cursor()
+
+    test = c.execute('SELECT sign FROM lendBookEmails WHERE sign =? ', (signature,)).fetchone()
+    if len(test) == 0:
+        # Nothign to delete
+        pass
+    else:
+        c.execute('DELETE FROM lendBookEmails WHERE sign = ?', (signature,))
+        conn.commit()
+    c.close()
+    conn.close()
+
+def read_lendBookEmails():
+    conn = sqlite3.connect('cirkulacija.db')
+    c = conn.cursor()
+
+    lst = c.execute('SELECT cirkStudents.email, takenBooks.title, takenBooks.author, takenBooks.sign, takenBooks.date_taken,'
+                    'takenBooks.date_bring_back FROM takenBooks INNER JOIN lendBookEmails ON lendBookEmails.sign = takenBooks.sign '
+                    'INNER JOIN cirkStudents ON cirkStudents.index_num = takenBooks.index_num').fetchall()
+    print("read_lendBookEmails", lst)
+    if len(lst) == 0:
+        c.close()
+        conn.close()
+        return 0
+    else:
+        c.close()
+        conn.close()
+        return lst
+
+# Storing unsent Emails - warnings and information
+def unsent_store(lst, sub=None, text=None):
+    conn = sqlite3.connect('cirkulacija.db')
+    c = conn.cursor()
+
+    if sub == None:
+        for l in lst:
+            # Type warning
+            c.execute('INSERT OR IGNORE INTO unsentEmails(email, type, number) VALUES(?,1,0)', (l[0], ))
+    else:
+        # Type information
+        c.execute('INSERT INTO sub_msg_emails(sub, msg) VALUES(?,?)', (sub, text))
+        number = c.execute('SELECT number FROM sub_msg_emails WHERE sub = ?', (sub, )).fetchone()[0]
+        for l in lst:
+            c.execute('INSERT OR IGNORE INTO unsentEmails(email, type, number) VALUES(?,0,?)', (l[0], number))
+
+    conn.commit()
+    c.close()
+    conn.close()
+
+# Deletes sent messages
+def unsent_delete(lst):
+    conn = sqlite3.connect('cirkulacija.db')
+    c = conn.cursor()
+
+    conn.commit()
+    c.close()
+    conn.close()
+
+# Reads from unsentEmails
+def unsent_read(type=None):
+    conn = sqlite3.connect('cirkulacija.db')
+    c = conn.cursor()
+
+    # Info emails
+    if type == 0:
+        data = c.execute('SELECT unsentEmails.email, sub_msg_emails.sub, sub_msg_emails.msg '
+                         'FROM unsentEmails INNER JOIN sub_msg_emails ON sub_msg_emails.number = unsentEmails.number')
+    # Warning Emails
+    elif type == 1:
+        data = c.execute('SELECT unsentEmails.email, dueBooks.title, dueBooks.author, '
+                'dueBooks.sign, dueBooks.date_taken, dueBooks.date_bring_back FROM dueBooks '
+                'INNER JOIN cirkStudents ON cirkStudents.index_num = dueBooks.index_num '
+                'INNER JOIN unsentEmails ON cirkStudents.email = unsentEmails.email'
+                'WHERE unsentEmails.type = 1').fetchall()
+    else:
+        data = []
+        pass
+
+    c.close()
+    conn.close()
+    return data

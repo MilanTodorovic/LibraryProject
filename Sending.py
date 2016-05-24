@@ -1,7 +1,9 @@
 import requests
+from requests import ConnectionError
 import time
 import bs4
 import multiprocessing
+import DataBase
 
 # URL is GLOBAL
 
@@ -67,6 +69,8 @@ def connecting(username, password, q):
 
 
 def send_email(s, lst, *args):
+    # lst is one User with all the information
+    # not a list of multiple users
 
     # compose.php?mailbox=INBOX&amp;startMessage=1 otvaranje sablona za pisanje
     global r
@@ -77,29 +81,29 @@ def send_email(s, lst, *args):
     recipient = lst[0]
     subject = 'Zaduzenje'
     body = "Postovani/Postovana,\n\n" \
-           "Ovo je automatska poruka koja Vas obavestava da ste se zaduzili za knjigu " \
-           ""+lst[1]+": '"+lst[2]+"', signatura: "+str(lst[3])+".\n" \
-            "Datum uzimanja: "+lst[4]+"\nRok za vracanje: "+lst[5]+"\n\n" \
-            "S postovanjem,\nMilan Todorovic\n\nBiblioteka Katedre za germanistiku\nFiloloski fakultet\n" \
-            "Univerzitet u Beogradu\nStudentski trg 3\nTel: 011/2021-698\nRadno vreme: 9.00-17.00"
+               "Ovo je automatska poruka koja Vas obavestava da ste se zaduzili za knjigu " \
+               ""+lst[1]+": '"+lst[2]+"', signatura: "+str(lst[3])+".\n" \
+                "Datum uzimanja: "+lst[4]+"\nRok za vracanje: "+lst[5]+"\n\n" \
+                "S postovanjem,\nMilan Todorovic\n\nBiblioteka Katedre za germanistiku\nFiloloski fakultet\n" \
+                "Univerzitet u Beogradu\nStudentski trg 3\nTel: 011/2021-698\nRadno vreme: 9.00-17.00"
 
     files = {"startMessage":(None, "1"),
-             "session":(None, "1"),
-             "passed_id":(None,""),
-             "send_to":(None, recipient),
-             "send_to_cc":(None, ""),
-             "send_to_bcc":(None, ""),
-             "subject":(None, subject),
-             "mailprio":(None, "3"),
-             "body":(None, body),
-             "send":(None, "Send"),
-             "attachfile":("",""),
-             "MAX_FILE_SIZE":(None, "20971520"),
-             "username":(None, "milan.todorovic"),
-             "smaction":(None, ""),
-             "mailbox":(None, "INBOX"),
-             "composesession":(None, "1"),
-             "querystring":(None, "mailbox=INBOX&startMessage=1")}
+                 "session":(None, "1"),
+                 "passed_id":(None,""),
+                 "send_to":(None, recipient),
+                 "send_to_cc":(None, ""),
+                 "send_to_bcc":(None, ""),
+                 "subject":(None, subject),
+                 "mailprio":(None, "3"),
+                 "body":(None, body),
+                 "send":(None, "Send"),
+                 "attachfile":("",""),
+                 "MAX_FILE_SIZE":(None, "20971520"),
+                 "username":(None, "milan.todorovic"),
+                 "smaction":(None, ""),
+                 "mailbox":(None, "INBOX"),
+                 "composesession":(None, "1"),
+                 "querystring":(None, "mailbox=INBOX&startMessage=1")}
 
     left_side = url+'left_main.php'
     right_side = url+'right_main.php'
@@ -108,28 +112,36 @@ def send_email(s, lst, *args):
     print('Loading left frame: ',l.status_code)
     print('Loading right frame: ',r.status_code)
 
-    time.sleep(1)
+    # time.sleep(1)
     compose = url + 'compose.php?mailbox=INBOX&amp;startMessage=1'
     r = s.get(compose)
     print('Enterying "Compose": ',r.status_code)
 
     send = url+'compose.php'
-    time.sleep(5)
-    r = s.post(send, files=files, allow_redirects=False)
+    # time.sleep(5)
+    # r = s.post(send, files=files, allow_redirects=False) doesnt work for soem reason
+    r = s.post(send, files=files, allow_redirects=True)
     print('Mail sent: ',r.status_code)
-    print('Redirecting to: ',r.headers['Location'])
-    r = s.get(r.headers['Location'])
-    print('Redirected to home page: ',r.status_code)
+    if int(r.status_code) == 200:
+        DataBase.delete_lendBookEmails(lst[3])
+    # print('Redirecting to: ',r.headers['Location'])
+    # r = s.get(r.headers['Location'])
+    # print('Redirected to home page: ',r.status_code)
     print('User successfully notified about taken book.')
-
+    return 0
 
 def send_warning(s, lst, q, *args):
+    # s is the session object
     # q is Queue()
+    global current_warning
+    global glst
     url = 'http://webmail.fil.bg.ac.rs/src/'
 
+    glst = list(lst)
     subject = 'Kasnjenje'
 
-    for i in lst:
+    # list consists of tuples with multiple element, e.g. (mail@gmail.com, author, book...)
+    for i in glst:
         q.put(1)
         recipient=i[0]
         body='Postovani,\n\nKasnite s vracanjem knjige '+str(i[1])+': "'+str(i[2])+'", signatura: '+str(i[3])+' uzete ' \
@@ -162,10 +174,14 @@ def send_warning(s, lst, q, *args):
 
         left_side = url + 'left_main.php'
         right_side = url + 'right_main.php'
-        l = s.get(left_side)
-        r = s.get(right_side)
-        print('Loading left frame: ', l.status_code)
-        print('Loading right frame: ', r.status_code)
+        try:
+            l = s.get(left_side)
+            r = s.get(right_side)
+            print('Loading left frame: ', l.status_code)
+            print('Loading right frame: ', r.status_code)
+        except ConnectionError:
+            # returns to variable security
+            return [i[0] for i in glst if i[0] not in current_warning]
 
         time.sleep(1)
         compose = url + 'compose.php?mailbox=INBOX&amp;startMessage=1'
@@ -173,24 +189,35 @@ def send_warning(s, lst, q, *args):
         print('Enterying "Compose": ', r.status_code)
 
         send = url + 'compose.php'
-        time.sleep(5)
+        time.sleep(1)
         r = s.post(send, files=files, allow_redirects=False)
         print('Mail sent: ', r.status_code)
         print('Redirecting to: ', r.headers['Location'])
         r = s.get(r.headers['Location'])
         print('Redirected to home page: ', r.status_code)
         print('Warning successfully sent.')
+        current_warning.append(i[0])
     q.put(0)
+    current_warning = []
+    glst = []
+    # returns to variable security
+    return 0
 
 
 def send_info(s, lst, sub, text, q):
     # q is Queue()
     url = 'http://webmail.fil.bg.ac.rs/src/'
+    global current_info
+    global glst
+    global subject
+    global body
 
+    glst = list(lst)
     subject = sub
     body = text
 
-    for i in lst:
+    # list consists of tuples with one element, e.g. (mail@gmail.com, )
+    for i in glst:
         q.put(1)
         recipient = i[0]
 
@@ -214,10 +241,14 @@ def send_info(s, lst, sub, text, q):
 
         left_side = url + 'left_main.php'
         right_side = url + 'right_main.php'
-        l = s.get(left_side)
-        r = s.get(right_side)
-        print('Loading left frame: ', l.status_code)
-        print('Loading right frame: ', r.status_code)
+        try:
+            l = s.get(left_side)
+            r = s.get(right_side)
+            print('Loading left frame: ', l.status_code)
+            print('Loading right frame: ', r.status_code)
+        except ConnectionError:
+            # returns to variable security
+            return [i[0] for i in glst if i[0] not in current_info]
 
         time.sleep(1)
         compose = url + 'compose.php?mailbox=INBOX&amp;startMessage=1'
@@ -232,7 +263,14 @@ def send_info(s, lst, sub, text, q):
         r = s.get(r.headers['Location'])
         print('Redirected to home page: ', r.status_code)
         print('Info successfully sent.')
+        current_info.append(i[0])
     q.put(0)
+    current_info = []
+    glst = []
+    body = None
+    subject = None
+    # returns to variable security
+    return 0
 
 def sign_out(s):
     # signout.php
@@ -245,17 +283,28 @@ def sign_out(s):
     # returns None so that the Session object can be checked later on
     return None
 
-# starts a multiprocess for sending e-mails
+# starts a multiprocess for send_info
 def sendInfo(s, lst, sub, text, q):
     global p
     p = multiprocessing.Process(target=send_info, args=(s, lst, sub, text, q))
     p.start()
 
-# starts a multiprocess for sending e-mails
+# starts a multiprocess for send_warning
 def sendWarning(s, lst, q):
     global p
     p = multiprocessing.Process(target=send_warning, args=(s, lst, q))
     p.start()
 
+# Stops the current process
+def stop_process():
+    global p
+
+    p.terminate()
+
 url = 'http://webmail.fil.bg.ac.rs/src/'
-p = None
+p = None # indicates if a process is alive
+current_info = [] # if sending is interrupted, the program "subtracts" this from glst and we get the students who didn't receive an email
+current_warning = [] # if sending is interrupted, the program "subtracts" this from glst and we get the students who didn't receive an email
+glst = [] #global list
+subject = None # subject of warning
+body = None # text of warning

@@ -9,10 +9,9 @@ from multiprocessing import Process, Queue
 from queue import Empty
 import threading
 
-"""Version 1.3
-The Window class has been split into multiple different classes.
-Each class represents a Notebook frame.
-A tuple of those classes can be found under the init_window method of the Window class."""
+"""Version 1.4
+Saving unsent notifications when lending a book
+and sending them the moment you log into you email account."""
 
 
 # TO DO
@@ -120,21 +119,29 @@ class Window(ttk.Frame):
         # Checks if there are new due books on the start-up
         threading._start_new_thread(DataBase.checkDue, ("0",))
 
+        # Checks if there are unsetn Emails about lending books
+        if self.session is not None:
+            self.checkUnsentBook()
+
+
     # Opens Toplevel() for a Login Form
     # Uses self.establish_connection
     def login(self):
-        self.connect = Toplevel()
+        if Window.session:
+            messagebox.showinfo("Obavestenje", "Vec ste ulogovani")
+        else:
+            self.connect = Toplevel()
 
-        self.lg_entry = [ttk.Entry(self.connect) for i in range(0, 2)]
-        self.lg_label = [ttk.Label(self.connect, text=i) for i in ['Korisnicko ime', 'Sifra', 'Status logovanja']]
-        self.lg_button = ttk.Button(self.connect, text='Uloguj me', command=self.establish_connection)
+            self.lg_entry = [ttk.Entry(self.connect) for i in range(0, 2)]
+            self.lg_label = [ttk.Label(self.connect, text=i) for i in ['Korisnicko ime', 'Sifra', 'Status logovanja']]
+            self.lg_button = ttk.Button(self.connect, text='Uloguj me', command=self.establish_connection)
 
-        self.lg_label[0].grid(row=2, column=1)
-        self.lg_label[1].grid(row=3, column=1)
-        self.lg_label[2].grid(row=4, column=2)
-        self.lg_entry[0].grid(row=2, column=2)
-        self.lg_entry[1].grid(row=3, column=2)
-        self.lg_button.grid(row=5, column=2)
+            self.lg_label[0].grid(row=2, column=1)
+            self.lg_label[1].grid(row=3, column=1)
+            self.lg_label[2].grid(row=4, column=2)
+            self.lg_entry[0].grid(row=2, column=2)
+            self.lg_entry[1].grid(row=3, column=2)
+            self.lg_button.grid(row=5, column=2)
 
     # Establishes session and connection, checks for errors
     def establish_connection(self):
@@ -169,6 +176,7 @@ class Window(ttk.Frame):
                             Window.session = self.session
                             self.status = 1
                             self.f5.checkLogin()
+                            self.checkUnsentBook()
                             messagebox.showinfo('Cestitamo',
                                                 'Uspesno ste se ulogovali.\nProgram se pokrece nakon sto pritisnete OK.')
                             root.after_cancel(self.id)
@@ -198,6 +206,27 @@ class Window(ttk.Frame):
             messagebox.showinfo('Obavestenje', 'Uspesno ste se izlogovali.')
             self.f5.checkLogin()
 
+    # Chesk if ther are unsent emails about lending a book
+    def checkUnsentBook(self):
+        response = DataBase.read_lendBookEmails()
+        if response is not 0:
+            threading._start_new_thread(self.sendUnsentEmails, (response,))
+
+    # Opens Toplevel for sending unsent Emails
+    # lst is the resposne from reading the DB
+    def sendUnsentEmails(self, lst):
+        window = Toplevel()
+        l = ttk.Label(window, text='Slanje neposlatih mejlova')
+        l.pack()
+        pb = ttk.Progressbar(window, value=0, maximum=len(lst), length=200)
+        pb.pack()
+        for l in lst:
+            response = Sending.send_email(Window.session, l)
+            if response == 0:
+                pb.step()
+        messagebox.showinfo("Obavestenje", "Svi neposlata obavestenja o pozajmici knjige su uspesno poslata.")
+        window.quit()
+        # dodati da odmah predje na upozorenja/informaciije
 
 
     # MAIN FRAMES FOR ANY FURTHER WINDOWS
@@ -255,23 +284,25 @@ class Window(ttk.Frame):
         for i in range(0, len(helpLabels)):
             helpLabels[i].pack()
 
-# subframe for searchign user information
+# Subframe for searchign user information
 class FirstFrame(Frame):
 
     def __init__(self, master):
         Frame.__init__(self, master)
         self.master=master
         self.session = Window.session
-        # Configuring rows and columns
         self.userEntryW()
 
+    # Frame that hosts all widgets
     def userEntryW(self):
+
+        # Configuring rows and columns
         for i in range(0,8):
             self.rowconfigure(i, weight=1)
-
         for i in range(0,7):
             self.columnconfigure(i, weight=1)
 
+        # Two seperate label frames to make things visually more appealing
         self.p_iw = ttk.LabelFrame(self, text="Pretraga korisnika", width = 275, height = 300)
         self.p_iw.configure(labelanchor = NSEW)
         self.p_iw.grid(row=1, column=0, padx=20, pady=20)
@@ -289,7 +320,7 @@ class FirstFrame(Frame):
 
         for i in self.column_names:
             self.tree.heading(i, text=i)
-            # self.tree.heading(i, text=i, command=lambda col=i: self.treeview_sort_column(self.tree, col, False))
+            self.tree.heading(i, text=i, command=lambda col=i: self.treeview_sort_column(self.tree, col, False))
 
         self.tree.grid(row=3, column=0, columnspan=8, sticky=NSEW)
 
@@ -338,6 +369,7 @@ class FirstFrame(Frame):
         self.e_sur.grid(row = 2, column = 1, pady = 5)
         # self.e_sur_help = ttk.Label(self.p_iw, text = "Upozorenje", width = 15, anchor = W)
         # self.e_sur_help.grid(row = 2, column = 2, padx=10, pady=10)
+
         ## Index number
         self.l_index = ttk.Label(self.p_iw, text = "Indeks:", width = 10, anchor = W)
         self.l_index.grid(row = 3, column = 0, padx = 5, pady = 5)
@@ -346,6 +378,7 @@ class FirstFrame(Frame):
         # ONLY usage is to make the grid look prettier
         self.e_index_help = ttk.Label(self.p_iw, text = "", width = 15, anchor = W)
         self.e_index_help.grid(row = 3, column = 2, padx=10, pady=10)
+
         ## City
         self.l_city = ttk.Label(self.p_iw, text = "Grad:", width = 10, anchor = W)
         self.l_city.grid(row = 4, column = 0, padx = 5, pady = 5)
@@ -362,6 +395,7 @@ class FirstFrame(Frame):
         self.e_aut.grid(row = 0, column = 1, pady =5)
         # self.e_aut_help = ttk.Label(self.p1_iw, text = "Upozorenje", width = 15, anchor = W)
         # self.e_aut_help.grid(row = 0, column = 2, padx=10, pady=10)
+
         ## Book Title
         self.l_book = ttk.Label(self.p1_iw, text = "Knjiga:", width = 10, anchor = W)
         self.l_book.grid(row = 1, column = 0, padx = 5, pady = 5)
@@ -369,6 +403,7 @@ class FirstFrame(Frame):
         self.e_book.grid(row = 1, column = 1, pady =5)
         # self.e_book_help = ttk.Label(self.p1_iw, text = "Upozorenje", width = 15, anchor = W)
         # self.e_book_help.grid(row = 1, column = 2, padx=10, pady=10)
+
         ## Signature
         self.l_sign = ttk.Label(self.p1_iw, text = "Signatura:", width = 10, anchor = W)
         self.l_sign.grid(row = 2, column = 0, padx = 5, pady = 5)
@@ -376,6 +411,7 @@ class FirstFrame(Frame):
         self.e_sign.grid(row = 2, column = 1, pady =5)
         # self.e_sign_help = ttk.Label(self.p1_iw, text = "Upozorenje", width = 15, anchor = W)
         # self.e_sign_help.grid(row = 2, column = 2, padx=10, pady=10)
+
         ## Date
         self.l_date = ttk.Label(self.p1_iw, text = "Datum:", width = 10, anchor = W)
         self.l_date.grid(row = 3, column = 0, padx = 5, pady = 5)
@@ -556,17 +592,31 @@ class FirstFrame(Frame):
     def helperText(self, *args):
         pass
 
+    # DOESN'T WORK AT ALL
+    def treeview_sort_column(self, tv, col, reverse):
+        l = [(tv.set(k, col), k) for k in tv.get_children('')]
+        l.sort(reverse=reverse)
 
-# subframe for adding new users
+        # rearrange items in sorted positions
+        for i, (val, k) in enumerate(l):
+            tv.move(k, '', i)
+
+        # reverse sort next time
+        tv.heading(col, command=lambda: self.treeview_sort_column(tv, col, not reverse))
+
+
+# Subframe for adding new users
 class SecondFrame(Frame):
 
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.master = master
-        self.user_entry_window()
+        self.add_user_window()
 
-    def user_entry_window(self, *args):
+    # Frame that hosts all widgets
+    def add_user_window(self, *args):
 
+        # Subframes to make things visually more appealing
         self.p_u = ttk.LabelFrame(self, text="Podaci o korisniku", width = 275, height = 300)
         self.p_u.configure(labelanchor = NSEW)
         self.p_u.grid(row=0, column=0, padx=20, pady=20)
@@ -652,6 +702,7 @@ class SecondFrame(Frame):
         self.button = ttk.Button(self.p1_u, text = "Unesi korisnika", command = self.add_user)
         self.button.grid(row = 5, column = 3, sticky = NSEW, padx = 5, pady = 5)
 
+    # Function that adds a user to the DB
     def add_user(self, *args):
         if self.surname.get() == "" or self.user.get() == "" or self.index.get() == "" or self.mail.get() == "":
             messagebox.showerror("Greska","Ne mozete uneti korisnika bez sledecih informacija:\nime, prezime, indeks, imejl")
@@ -674,12 +725,12 @@ class SecondFrame(Frame):
             self.house_nr_e.delete(0, END)
             self.city_e.delete(0, END)
 
-    # checks if certain information in the DB exist (users, books, due books...)
+    # Checks if certain information in the DB exist (users, books, due books...)
     def checkExistance(self, index=None, *args):
         DataBase.check_Existance("0", index, None)
 
 
-# subframe for lending a book and book stuff
+# Subframe for lending a book and book stuff
 class ThirdFrame(Frame):
 
     def __init__(self, master=None):
@@ -688,7 +739,9 @@ class ThirdFrame(Frame):
         self.session = Window.session
         self.takeAbook()
 
+    # Frame that hosts all widgets
     def takeAbook(self):
+
         # LabelFarmes
         self.p_b = ttk.LabelFrame(self, text="Podaci o knjizi", width = 400, height = 100)
         self.p_b.configure(labelanchor = NSEW)
@@ -713,9 +766,9 @@ class ThirdFrame(Frame):
         self.book = StringVar()
         self.sign = StringVar()
         self.store_date = StringVar()
-        # for updates
+        # for updates of the date when the book was taken
         self.sign_j_var = StringVar()
-        # for bringing back
+        # for bringing back a book
         self.sign_b_var = StringVar()
 
         # Labels and Entries
@@ -828,8 +881,13 @@ class ThirdFrame(Frame):
         else:
             lst = DataBase.take_a_book(self.index_b.get(), self.book.get(), self.author.get(), self.sign.get(), self.store_date.get())
             # print(lst)
-            # IZDAVANJE KNJIGA BEZ LOGOVANJA
-            Process(target=Sending.send_email, args=(self.session, lst)).start()
+            # If the librarian hasn't logged in yet, the sending of the e-mail will be postponed
+            if self.session == None:
+                messagebox.showwarning("Upozorenje", "Niste ulogovani. Slanje obavestenja korisniku da je iznajmio knjigu"
+                                                     " bice obavljeno naknadno, cim se ulogujete.")
+                DataBase.lendBookEmails(lst[3])
+            else:
+                Process(target=Sending.send_email, args=(self.session, lst)).start()
             self.index_e_b.delete(0, END)
             self.aut_e.delete(0, END)
             self.book_e.delete(0, END)
@@ -888,7 +946,7 @@ class ThirdFrame(Frame):
         for i in self.treeDue.get_children():
             self.treeDue.delete(i)
 
-# subframe for updating user information
+# Subframe for updating user information
 class ForthFrame(Frame):
 
     def __init__(self, master=None):
@@ -961,7 +1019,7 @@ class ForthFrame(Frame):
                 DataBase.update_info("0", *self.getValues, sign_db=None)
 
 
-# subframe for sending emails
+# Subframe for sending emails
 class FifthFrame(Frame):
     def __init__(self, master=None):
         Frame.__init__(self, master)
@@ -1051,19 +1109,31 @@ class FifthFrame(Frame):
         else:
             self.num_mail = len(lst)
             self.pbar['maximum'] = self.num_mail
-            Sending.sendWarning(self.session, lst, self.q)
+            # security is used if a connection error occures
+            security = Sending.sendWarning(self.session, lst, self.q)
             self.id = root.after(100, self.uppbar_warning)
+            if security is not 0:
+                DataBase.unsent_store(security, None, None)
+                messagebox.showerror("Greska", "Doslo je do greske u vezi sa internetom."
+                                               "Neposlate poruke su sacuvane u sistemu i bice poslate kasnije.")
 
     def sendEmailInfo(self, *args):
         # lst = []
         self.amount = 1
         if self.var_om.get() == 'Svi':
-            lst = DataBase.read_email('%') # gets data as a list of tuples
+            lst = DataBase.read_email('%') # gets emails as a list of tuples
             print(lst)
             self.num_mail = len(lst)
             self.pbar['maximum'] = self.num_mail
-            Sending.sendInfo(self.session, lst, self.l_title_e.get(), self.s_textbox.get(1.0, END), self.q)
+            sub = self.l_title_e.get()
+            text = self.s_textbox.get(1.0, END)
+            # security is used if a connection error occures
+            security = Sending.sendInfo(self.session, lst, sub, text, self.q)
             self.id = root.after(100, self.uppbar_info)
+            if security is not 0:
+                DataBase.unsent_store(security, sub, text)
+                messagebox.showerror("Greska", "Doslo je do greske u vezi sa internetom."
+                                               "Neposlate poruke su sacuvane u sistemu i bice poslate kasnije.")
 
         else:
             gen = self.var_om1.get() # returns ('09',) as a string, not a tuple element
@@ -1077,8 +1147,15 @@ class FifthFrame(Frame):
                 print(lst)
                 self.num_mail = len(lst)
                 self.pbar['maximum']=self.num_mail
-                Sending.sendInfo(self.session, lst, self.l_title_e.get(), self.s_textbox.get(1.0, END), self.q)
+                sub = self.l_title_e.get()
+                text = self.s_textbox.get(1.0, END)
+                # security is used if a connection error occures
+                security = Sending.sendInfo(self.session, lst, sub, text, self.q)
                 self.id = root.after(100, self.uppbar_info)
+                if security is not 0:
+                    DataBase.unsent_store(security, sub, text)
+                    messagebox.showerror("Greska", "Doslo je do greske u vezi sa internetom."
+                                                   "Neposlate poruke su sacuvane u sistemu i bice poslate kasnije.")
 
     # SETS NEWLY ENTERED VALUES USING _SETIT CLASS FROM TKINTER
     def refresh(self):
@@ -1160,44 +1237,45 @@ class FifthFrame(Frame):
                 pass
             self.warning_l.config(text='')
 
-# subframe for deleting users
+# Subframe for deleting users
 class SixthFrame(Frame):
 
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.master = master
-        self.session = Window.session
         self.delUser()
 
+    # Frame that hosts all widgets
     def delUser(self):
-        self.du_strvar = StringVar()
-        self.du_strvar.trace('w', self.du_loadInfo)
+        self.du_strVar = StringVar()
+        self.du_strVar.trace('w', self.du_loadInfo)
         self.user_exists = 0
 
         self.du_label = ttk.Label(self, text='Unesite indeks korisnika:')
         self.du_label.grid(row=0, column=0, sticky=W, padx=10, pady=10)
-        self.du_index = ttk.Entry(self, textvariable=self.du_strvar)
+        self.du_index = ttk.Entry(self, textvariable=self.du_strVar)
         self.du_index.grid(row=0, column=1, padx=10, pady=10)
 
         self.du_label_names = ["Prezime:", "Ime:", "Br. lic karte:", "JMBG:", "Telefon:", "Mobilni:", "E-mail:",
                            "Ulica:", "Broj:", "Grad:"]
 
-        self.ud_labels = [ttk.Label(self, text=l, anchor=W) for l in
+        self.du_labels = [ttk.Label(self, text=l, anchor=W) for l in
                           self.du_label_names]
         self.du_entries = [ttk.Entry(self, state=DISABLED) for l in self.du_label_names]
+
         for i in range(0, len(self.du_label_names)):
             if i >= 7:
-                self.ud_labels[i].grid(row=i-6, column=3, sticky=W, padx=10, pady=10)
+                self.du_labels[i].grid(row=i-6, column=3, sticky=W, padx=10, pady=10)
                 self.du_entries[i].grid(row=i-6, column=4, padx=10, pady=10)
             else:
-                self.ud_labels[i].grid(row=i+1, column=1, sticky=W, padx=10, pady=10)
+                self.du_labels[i].grid(row=i+1, column=1, sticky=W, padx=10, pady=10)
                 self.du_entries[i].grid(row=i+1, column=2, padx=10, pady=10)
 
 
         self.du_button = ttk.Button(self, text='Izbrisi korisnika', command = self.delete_users)
         self.du_button.grid(row=10, column=2, padx=10, pady=10)
 
-    # loads information of user
+    # Loads information of user into the entries
     def du_loadInfo(self, *args):
 
         for i in range(0, len(self.du_entries)):
@@ -1206,7 +1284,7 @@ class SixthFrame(Frame):
         for i in range(0, len(self.du_entries)):
             self.du_entries[i].delete(0, END)
 
-        index = self.du_strvar.get()
+        index = self.du_strVar.get()
         self.li_list = DataBase.read_db(index, None, None, None, None, None, None, None, None)
         # print('du_loadInfo funckija:', self.li_list)
 
@@ -1229,7 +1307,7 @@ class SixthFrame(Frame):
                 self.du_entries[i].config(state=DISABLED)
             return 0
 
-    # deletes user
+    # Deletes user
     def delete_users(self):
         if self.user_exists:
             x = DataBase.delete_user(self.du_index.get())
@@ -1246,36 +1324,30 @@ class SixthFrame(Frame):
         else:
             messagebox.showerror('Greska', 'Unesite ispravan indeks korisnika.')
 
-    # DOESN'T WORK AT ALL
-    def treeview_sort_column(self, tv, col, reverse):
-        l = [(tv.set(k, col), k) for k in tv.get_children('')]
-        l.sort(reverse=reverse)
-
-        # rearrange items in sorted positions
-        for i, (val, k) in enumerate(l):
-            tv.move(k, '', i)
-
-        # reverse sort next time
-        tv.heading(col, command=lambda: self.treeview_sort_column(tv, col, not reverse))
-
 # event function that performs a log out before closing the window
 def on_closing():
     try:
         if Sending.p.is_alive():
             if messagebox.askyesno('Upozorenje', 'Slanje mejlova jos nije okoncano.\n'
                                                  'Da li ipak zelite da ugasite program?'):
-                try:
-                    Sending.sign_out(app.session)
-                except:
-                    pass
+                Sending.stop_process()
+                if Sending.current_info:
+                    new_lst = [i for i in Sending.glst if not i in Sending.current_info]
+                    sub = Sending.subject
+                    text = Sending.body
+                    DataBase.unsent_store(new_lst, sub, text)
+                else:
+                    new_lst = [i for i in Sending.glst if not i in Sending.current_warning]
+                    DataBase.unsent_store(new_lst, None, None)
+
+                if Window.session:
+                    Sending.sign_out(Window.session)
                 root.destroy()
     except:
         if messagebox.askokcancel("Izlaz", "Da li zelite da ugasite program?\n"
                                            "Bicete automatski izlogovani prilikom napustanja programa."):
-            try:
-                Sending.sign_out(app.session)
-            except:
-                pass
+            if Window.session:
+                Sending.sign_out(Window.session)
             root.destroy()
 
 if __name__ == '__main__':
@@ -1296,3 +1368,4 @@ if __name__ == '__main__':
 
     root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
+
