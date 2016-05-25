@@ -29,11 +29,11 @@ Some radical changes in the structure of the Main.py file. The <b>Window</b> cla
 Added a mechanism to store unsend Emails in case of connection issues or something similar.<br>
 Not all Emails can be stored and some fucntions don't work.</strike>
 <h2>Version 1.5</h2>
-Changes:
-1. Some SQLite queries and Table schemes
-2. New functions that store and send unsent Emails (due to connection loss, etc.)
-3. Toplevel window with progressbar for sending out previously unsent Emails
-4. Slight changes in some parts of the code
+Changes: <br>
+1. Some SQLite queries and Table schemes<br>
+2. New functions that store and send unsent Emails (due to connection loss, etc.)<br>
+3. Toplevel window with progressbar for sending out previously unsent Emails<br>
+4. Slight changes in some parts of the code<br>
 
 <h1>TO DO</h1>
 1. <strike>Enable saving unsent e-mails to a file/database in case of internet connection loss. (Partially done with 1.4.5)</strike>
