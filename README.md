@@ -29,6 +29,6 @@ Added a mechanism to store unsend Emails in case of connection issues or somethi
 Not all Emails can be stored and some fucntions don't work.
 
 <h1>TO DO</h1>
-1. Enable saving unsent e-mails to a file/database in case of internet connection loss.
+1. Enable saving unsent e-mails to a file/database in case of internet connection loss. (Partially done with 1.4.5)
 2. Changes in variable names. (Make them more readable and informative)
 3. Some changes to teh structure of the code and maybe some more features.
