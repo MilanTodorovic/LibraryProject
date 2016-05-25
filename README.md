@@ -22,8 +22,9 @@ using multiprocessing and queues) of the number of sent Emails.<br>
 It has a big number of error checking and prevention from breaking (mostly by the user).
 
 <h1>Updates</h1>
+<strike>
 <h2>Version 1.3</h2>
-Some radical changes in the structure of the Main.py file. The <b>Window</b> class broken down into multiple classes, each for every individual <b>ttk.Notebook</b> frame. This might result in some bugs, but I hope it won't.
+Some radical changes in the structure of the Main.py file. The <b>Window</b> class broken down into multiple classes, each for every individual <b>ttk.Notebook</b> frame. This might result in some bugs, but I hope it won't.</strike>
 <h2>Version 1.4.5</h2>
 Added a mechanism to store unsend Emails in case of connection issues or something similar.<br>
 Not all Emails can be stored and some fucntions don't work.
