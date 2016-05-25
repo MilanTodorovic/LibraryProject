@@ -39,7 +39,7 @@ def connecting(username, password, q):
     try:
         r = s.get(session_url)
         print('Starting session: ',r.status_code)
-        q.put('Starting session')
+        q.put_nowait('Starting session')
     except TimeoutError:
         return 2
 
@@ -50,19 +50,19 @@ def connecting(username, password, q):
         title = soup.title.string
         if 'Unknown' in title:
             print('Neuspelo logovanje')
-            q.put('Neuspelo logovanje')
+            q.put_nowait('Neuspelo logovanje')
             return 1
     else:
         print('Logging in: ',r.status_code)
-        q.put('Ulogovanje')
+        q.put_nowait('Ulogovanje')
         # print(r.headers)
         print('Redirecting to: ',r.headers['Location'])
-        q.put('Preusmeravanje')
+        q.put_nowait('Preusmeravanje')
         home_url=url+r.headers['Location']
         r = s.get(home_url)
         print('Redirected to home page: ',r.status_code)
         print('Successfully connected')
-        q.put('Logovanje uspelo')
+        q.put_nowait('Logovanje uspelo')
         print('Printing s in connecting()', s)
 
         return s
@@ -142,7 +142,7 @@ def send_warning(s, lst, q, *args):
 
     # list consists of tuples with multiple element, e.g. (mail@gmail.com, author, book...)
     for i in glst:
-        q.put(1)
+        q.put_nowait(1)
         recipient=i[0]
         body='Postovani,\n\nKasnite s vracanjem knjige '+str(i[1])+': "'+str(i[2])+'", signatura: '+str(i[3])+' uzete ' \
                 ''+str(i[4])+'.\n Rok za vracanje je bio '+str(i[5])+'.\n' \
@@ -181,7 +181,7 @@ def send_warning(s, lst, q, *args):
             print('Loading right frame: ', r.status_code)
         except ConnectionError:
             # returns to variable security
-            return [i[0] for i in glst if i[0] not in current_warning]
+            return [i for i in glst if i[0] not in current_warning]
 
         time.sleep(1)
         compose = url + 'compose.php?mailbox=INBOX&amp;startMessage=1'
@@ -197,7 +197,8 @@ def send_warning(s, lst, q, *args):
         print('Redirected to home page: ', r.status_code)
         print('Warning successfully sent.')
         current_warning.append(i[0])
-    q.put(0)
+        DataBase.unsentWarning_delete(i[0])
+    q.put_nowait(0)
     current_warning = []
     glst = []
     # returns to variable security
@@ -218,7 +219,7 @@ def send_info(s, lst, sub, text, q):
 
     # list consists of tuples with one element, e.g. (mail@gmail.com, )
     for i in glst:
-        q.put(1)
+        q.put_nowait(1)
         recipient = i[0]
 
         files = {"startMessage": (None, "1"),
@@ -264,7 +265,8 @@ def send_info(s, lst, sub, text, q):
         print('Redirected to home page: ', r.status_code)
         print('Info successfully sent.')
         current_info.append(i[0])
-    q.put(0)
+        DataBase.unsentInformation_delete(i[0], sub)
+    q.put_nowait(0)
     current_info = []
     glst = []
     body = None

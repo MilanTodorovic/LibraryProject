@@ -9,7 +9,7 @@ from multiprocessing import Process, Queue
 from queue import Empty
 import threading
 
-"""Version 1.4
+"""Version 1.5.0
 Saving unsent notifications when lending a book
 and sending them the moment you log into you email account."""
 
@@ -98,7 +98,7 @@ class Window(ttk.Frame):
 
         # All the ttk.notebook frames
         self.master = master
-
+        self.master.title("Cirkulacija V1.5.0")
         self.init_window() # initializes all the subframes and starts the first frame
 
         # self.user_entry_window() # subframe for eneterying a new user
@@ -208,9 +208,18 @@ class Window(ttk.Frame):
 
     # Chesk if ther are unsent emails about lending a book
     def checkUnsentBook(self):
+        # Unsent emails about lending a book
         response = DataBase.read_lendBookEmails()
-        if response is not 0:
+        if response:
             threading._start_new_thread(self.sendUnsentEmails, (response,))
+        # Unsent emails about some information
+        response = DataBase.unsent_read(0)
+        if response:
+            threading._start_new_thread(self.sendUnsentInformation, (response,))
+        # Unsent warning emails
+        response = DataBase.unsent_read(1)
+        if response:
+            threading._start_new_thread(self.sendUnsentWarnings, (response,))
 
     # Opens Toplevel for sending unsent Emails
     # lst is the resposne from reading the DB
@@ -224,15 +233,37 @@ class Window(ttk.Frame):
             response = Sending.send_email(Window.session, l)
             if response == 0:
                 pb.step()
-        messagebox.showinfo("Obavestenje", "Svi neposlata obavestenja o pozajmici knjige su uspesno poslata.")
+        messagebox.showinfo("Obavestenje", "Sva neposlata obavestenja o pozajmici knjige su uspesno poslata.")
         window.quit()
-        # dodati da odmah predje na upozorenja/informaciije
 
+    def sendUnsentWarnings(self, lst):
+        window = Toplevel()
+        l = ttk.Label(window, text='Slanje neposlatih mejlova')
+        l.pack()
+        pb = ttk.Progressbar(window, value=0, maximum=len(lst), length=200)
+        pb.pack()
+        for l in lst:
+            response = Sending.send_email(Window.session, l)
+            if response == 0:
+                pb.step()
+        messagebox.showinfo("Obavestenje", "Sva neposlata upozorenja su uspesno poslata.")
+        window.quit()
+
+    def sendUnsentInformation(self, lst):
+        window = Toplevel()
+        l = ttk.Label(window, text='Slanje neposlatih mejlova')
+        l.pack()
+        pb = ttk.Progressbar(window, value=0, maximum=len(lst), length=200)
+        pb.pack()
+        for l in lst:
+            response = Sending.send_email(Window.session, l)
+            if response == 0:
+                pb.step()
+        messagebox.showinfo("Obavestenje", "Sva neposlata obavestenja e su uspesno poslata.")
+        window.quit()
 
     # MAIN FRAMES FOR ANY FURTHER WINDOWS
     def init_window(self):
-
-        self.master.title("Cirkulacija V1.3.0")
         # list of all the frame classes
         self.nb = ttk.Notebook(self)
         FRAME_CLASSES = (FirstFrame, SecondFrame, ThirdFrame, ForthFrame, FifthFrame, SixthFrame)
@@ -278,7 +309,7 @@ class Window(ttk.Frame):
         top.title('O programu')
         top.geometry('250x100')
         top.focus_set()
-        helplist = ['Turbo Cirkulator 3000', 'Verzija: 1.2', 'Copyright Milan Todorovic 2016-',
+        helplist = ['Turbo Cirkulator 3000', 'Verzija: 1.5.0', 'Copyright Milan Todorovic 2016-',
                     'Beta testeri: Danijel Milosevic,']
         helpLabels = [ttk.Label(top, text=i) for i in helplist]
         for i in range(0, len(helpLabels)):
@@ -1110,6 +1141,7 @@ class FifthFrame(Frame):
             self.num_mail = len(lst)
             self.pbar['maximum'] = self.num_mail
             # security is used if a connection error occures
+            # it receives a list of all the tuples (email, book...) which weren't sent
             security = Sending.sendWarning(self.session, lst, self.q)
             self.id = root.after(100, self.uppbar_warning)
             if security is not 0:
@@ -1128,6 +1160,7 @@ class FifthFrame(Frame):
             sub = self.l_title_e.get()
             text = self.s_textbox.get(1.0, END)
             # security is used if a connection error occures
+            # it receives a list of all the emails which weren't sent
             security = Sending.sendInfo(self.session, lst, sub, text, self.q)
             self.id = root.after(100, self.uppbar_info)
             if security is not 0:

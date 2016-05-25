@@ -15,8 +15,9 @@ def create_table():
               'date_bring_back TEXT)')
     c.execute('CREATE TABLE IF NOT EXISTS generations(index_part TEXT UNIQUE, i_value INTEGER PRIMARY KEY AUTOINCREMENT )')
     c.execute('CREATE TABLE IF NOT EXISTS lendBookEmails(sign INTEGER PRIMARY KEY)')
-    # type 0 for information, type 1 for warning message
-    c.execute('CREATE TABLE IF NOT EXISTS unsentEmails(email TEXT, type INTEGER, number INTEGER, PRIMARY KEY(email, type))')
+    # last three store unsent emails
+    c.execute('CREATE TABLE IF NOT EXISTS unsentWarnings(email TEXT, author TEXT, book TEXT, sign INTEGER, date_taken TEXT, date_back TEXT)')
+    c.execute('CREATE TABLE IF NOT EXISTS unsentInformation(email TEXT, number INTEGER, PRIMARY KEY(email, number))')
     c.execute('CREATE TABLE IF NOT EXISTS sub_msg_emails(sub TEXT, msg TEXT, number INTEGER PRIMARY KEY)')
 
     c.close()
@@ -347,22 +348,16 @@ def delete_info(sign=None):
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
 
-    data = c.execute('SELECT COUNT(*) FROM takenBooks WHERE sign = ?', (sign,)).fetchone()
-    if data[0] > 0:
-        book = c.execute('SELECT (author||": "||title) FROM takenBooks WHERE sign = ?',(sign,)).fetchall()
-        c.execute('DELETE FROM takenBooks WHERE sign = ?', (sign,))
-        conn.commit()
+    book = c.execute('SELECT (author||": "||title) FROM takenBooks WHERE sign = ?',(sign,)).fetchall()
+    c.execute('DELETE FROM takenBooks WHERE sign = ?', (sign,))
+    if book:
         messagebox.showinfo("Obavestenje", "Knjiga "+str(book[0][0])+" je uspesno razduzena.")
-
-        data1 = c.execute('SELECT COUNT(*) FROM dueBooks WHERE sign = ?', (sign,)).fetchone()
-        if data1[0]>0:
-            c.execute('DELETE FROM dueBooks WHERE sign = ?', (sign,))
-            conn.commit()
-        else:
-            pass
-            #print("Knjiga "+str(sign)+" nije prekoracila zaduzenje.")
+        c.execute('DELETE FROM dueBooks WHERE sign = ?', (sign,))
+        conn.commit()
     else:
-        messagebox.showerror("Greska","Knjiga sa signaturom: "+str(sign)+" ne postoji u bazi.")
+        messagebox.showerror("Greska", "Knjiga sa signaturom: " + str(sign) + " ne postoji u bazi.")
+
+
 
     c.close()
     conn.close()
@@ -420,12 +415,15 @@ def read_email(index_num):
 def deleteTables():
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
-    c.executescript('DROP TABLE IF EXISTS cirkStudents;'
-                    'DROP TABLE IF EXISTS addressStudents;'
-                    'DROP TABLE IF EXISTS takenBooks;'
-                    'DROP TABLE IF EXISTS dueBooks;'
-                    'DROP TABLE IF EXISTS generations;'
-                    'DROP TABLE IF EXISTS lendBookEmails;'
+    # c.executescript('DROP TABLE IF EXISTS cirkStudents;'
+    #                 'DROP TABLE IF EXISTS addressStudents;'
+    #                 'DROP TABLE IF EXISTS takenBooks;'
+    #                 'DROP TABLE IF EXISTS dueBooks;'
+    #                 'DROP TABLE IF EXISTS generations;'
+    #                 'DROP TABLE IF EXISTS lendBookEmails;'
+                    # 'DROP TABLE IF EXISTS unsentEmails;'
+                    # 'DROP TABLE IF EXISTS sub_msg_emails;')
+    c.executescript('DROP TABLE IF EXISTS lendBookEmails;'
                     'DROP TABLE IF EXISTS unsentEmails;'
                     'DROP TABLE IF EXISTS sub_msg_emails;')
     conn.commit()
@@ -450,13 +448,9 @@ def delete_lendBookEmails(signature):
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
 
-    test = c.execute('SELECT sign FROM lendBookEmails WHERE sign =? ', (signature,)).fetchone()
-    if len(test) == 0:
-        # Nothign to delete
-        pass
-    else:
-        c.execute('DELETE FROM lendBookEmails WHERE sign = ?', (signature,))
-        conn.commit()
+    c.execute('DELETE FROM lendBookEmails WHERE sign = ?', (signature,))
+
+    conn.commit()
     c.close()
     conn.close()
 
@@ -484,23 +478,41 @@ def unsent_store(lst, sub=None, text=None):
 
     if sub == None:
         for l in lst:
-            # Type warning
-            c.execute('INSERT OR IGNORE INTO unsentEmails(email, type, number) VALUES(?,1,0)', (l[0], ))
+            # Type for warnings
+            c.execute('INSERT OR IGNORE INTO unsentWarnings VALUES(?,?,?,?,?,?)', (l[0],l[1],l[2],l[3],l[4],l[5]))
     else:
-        # Type information
-        c.execute('INSERT INTO sub_msg_emails(sub, msg) VALUES(?,?)', (sub, text))
+        # Type for information
+        num = c.execute('SELECT MAX(number) FROM sub_msg_emails').fetchone()[0]
+        if num == None:
+            num = 0
+        c.execute('INSERT INTO sub_msg_emails(sub, msg, number) VALUES(?,?, ?)', (sub, text, num+1))
         number = c.execute('SELECT number FROM sub_msg_emails WHERE sub = ?', (sub, )).fetchone()[0]
         for l in lst:
-            c.execute('INSERT OR IGNORE INTO unsentEmails(email, type, number) VALUES(?,0,?)', (l[0], number))
+            c.execute('INSERT OR IGNORE INTO unsentInformation(email, type, number) VALUES(?,0,?)', (l[0], number))
 
     conn.commit()
     c.close()
     conn.close()
 
-# Deletes sent messages
-def unsent_delete(lst):
+# Deletes sent warnings
+def unsentWarning_delete(email):
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
+
+    c.execute('DELETE FROM unsetnWarning WHERE email = ?', (email,))
+
+    conn.commit()
+    c.close()
+    conn.close()
+
+
+# Deletes sent information
+def unsentInformation_delete(email, sub):
+    conn = sqlite3.connect('cirkulacija.db')
+    c = conn.cursor()
+
+    c.execute('DELETE FROM unsetnInformation WHERE email = ? and number IN '
+              '(SELECT number FROM sub_msg_emails WHERE sub = ?)', (email, sub))
 
     conn.commit()
     c.close()
@@ -513,18 +525,15 @@ def unsent_read(type=None):
 
     # Info emails
     if type == 0:
-        data = c.execute('SELECT unsentEmails.email, sub_msg_emails.sub, sub_msg_emails.msg '
-                         'FROM unsentEmails INNER JOIN sub_msg_emails ON sub_msg_emails.number = unsentEmails.number')
+        data = c.execute('SELECT unsentInformation.email, sub_msg_emails.sub, sub_msg_emails.msg '
+                         'FROM unsentInformation INNER JOIN sub_msg_emails ON sub_msg_emails.number = unsentInformation.number').fetchall()
+
     # Warning Emails
     elif type == 1:
-        data = c.execute('SELECT unsentEmails.email, dueBooks.title, dueBooks.author, '
-                'dueBooks.sign, dueBooks.date_taken, dueBooks.date_bring_back FROM dueBooks '
-                'INNER JOIN cirkStudents ON cirkStudents.index_num = dueBooks.index_num '
-                'INNER JOIN unsentEmails ON cirkStudents.email = unsentEmails.email'
-                'WHERE unsentEmails.type = 1').fetchall()
+        data = c.execute('SELECT * FROM unsentWarnings').fetchall()
     else:
+        # just in case i decide to add/change something
         data = []
-        pass
 
     c.close()
     conn.close()
