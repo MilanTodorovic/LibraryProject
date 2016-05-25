@@ -24,12 +24,18 @@ It has a big number of error checking and prevention from breaking (mostly by th
 <h1>Updates</h1>
 <strike>
 <h2>Version 1.3</h2>
-Some radical changes in the structure of the Main.py file. The <b>Window</b> class broken down into multiple classes, each for every individual <b>ttk.Notebook</b> frame. This might result in some bugs, but I hope it won't.</strike>
+Some radical changes in the structure of the Main.py file. The <b>Window</b> class broken down into multiple classes, each for every individual <b>ttk.Notebook</b> frame. This might result in some bugs, but I hope it won't.
 <h2>Version 1.4.5</h2>
 Added a mechanism to store unsend Emails in case of connection issues or something similar.<br>
-Not all Emails can be stored and some fucntions don't work.
+Not all Emails can be stored and some fucntions don't work.</strike>
+<h2>Version 1.5</h2>
+Changes:
+1. Some SQLite queries and Table schemes
+2. New functions that store and send unsent Emails (due to connection loss, etc.)
+3. Toplevel window with progressbar for sending out previously unsent Emails
+4. Slight changes in some parts of the code
 
 <h1>TO DO</h1>
-1. Enable saving unsent e-mails to a file/database in case of internet connection loss. (Partially done with 1.4.5)
+<strike>1. Enable saving unsent e-mails to a file/database in case of internet connection loss. (Partially done with 1.4.5)
 2. Changes in variable names. (Make them more readable and informative)
 3. Some changes to teh structure of the code and maybe some more features.
