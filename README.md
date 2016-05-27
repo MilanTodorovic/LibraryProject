@@ -47,3 +47,4 @@ Changes: <br>
 1. <strike>Enable saving unsent e-mails to a file/database in case of internet connection loss. (Partially done with 1.4.5)</strike>
 2. Changes in variable names. (Make them more readable and informative)
 3. Some changes to teh structure of the code and maybe some more features.
+4. Add a log. (Either as a seperate window and as a .txt file)
