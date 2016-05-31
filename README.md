@@ -48,3 +48,4 @@ Changes: <br>
 2. Changes in variable names. (Make them more readable and informative)
 3. Some changes to teh structure of the code and maybe some more features.
 4. Add a log. (Either as a seperate window and as a .txt file)
+5. Add tix.Balloon (hovering frame to display helpful information)
