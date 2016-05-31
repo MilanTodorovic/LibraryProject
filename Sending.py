@@ -39,9 +39,11 @@ def connecting(username, password, q):
     try:
         r = s.get(session_url)
         print('Starting session: ',r.status_code)
-        q.put_nowait('Starting session')
+        q.put('Pocetak sesije')
     except TimeoutError:
-        return 2
+        q.put(2)
+        q.close()
+        return 0
 
     # allow_redirects=False omogucava Location u headers
     r = s.post(login_url, data=payload, allow_redirects=False)
@@ -50,22 +52,28 @@ def connecting(username, password, q):
         title = soup.title.string
         if 'Unknown' in title:
             print('Neuspelo logovanje')
-            q.put_nowait('Neuspelo logovanje')
-            return 1
+            q.put('Neuspelo logovanje')
+            q.put(1)
+            q.close()
+            return 0
     else:
         print('Logging in: ',r.status_code)
-        q.put_nowait('Ulogovanje')
+        q.put('Ulogovanje')
         # print(r.headers)
         print('Redirecting to: ',r.headers['Location'])
-        q.put_nowait('Preusmeravanje')
+        q.put('Preusmeravanje')
         home_url=url+r.headers['Location']
         r = s.get(home_url)
         print('Redirected to home page: ',r.status_code)
         print('Successfully connected')
-        q.put_nowait('Logovanje uspelo')
+        q.put('Logovanje uspelo')
         print('Printing s in connecting()', s)
+        q.put_nowait(0)
+        q.put_nowait(s)
+        q.close()
+        q.join_thread()
 
-        return s
+        return 0
 
 
 def send_email(s, lst, *args):
@@ -130,6 +138,8 @@ def send_email(s, lst, *args):
     print('User successfully notified about taken book.')
     return 0
 
+
+# izbrisati return i sve vratiti putem q.put_nowait() u security_w
 def send_warning(s, lst, q, *args):
     # s is the session object
     # q is Queue()
@@ -180,8 +190,10 @@ def send_warning(s, lst, q, *args):
             print('Loading left frame: ', l.status_code)
             print('Loading right frame: ', r.status_code)
         except ConnectionError:
+            q.close()
             # returns to variable security
             return [i for i in glst if i[0] not in current_warning]
+
 
         time.sleep(1)
         compose = url + 'compose.php?mailbox=INBOX&amp;startMessage=1'
@@ -199,6 +211,7 @@ def send_warning(s, lst, q, *args):
         current_warning.append(i[0])
         DataBase.unsentWarning_delete(i[0])
     q.put_nowait(0)
+    q.close()
     current_warning = []
     glst = []
     # returns to variable security
@@ -248,8 +261,11 @@ def send_info(s, lst, sub, text, q):
             print('Loading left frame: ', l.status_code)
             print('Loading right frame: ', r.status_code)
         except ConnectionError:
-            # returns to variable security
-            return [i[0] for i in glst if i[0] not in current_info]
+            q.put_nowait(2)
+            n = [i[0] for i in glst if i[0] not in current_info]
+            q.put_nowait(n)
+            # return [i[0] for i in glst if i[0] not in current_info]
+            q.close()
 
         time.sleep(1)
         compose = url + 'compose.php?mailbox=INBOX&amp;startMessage=1'
@@ -267,11 +283,12 @@ def send_info(s, lst, sub, text, q):
         current_info.append(i[0])
         DataBase.unsentInformation_delete(i[0], sub)
     q.put_nowait(0)
+    q.close()
     current_info = []
     glst = []
     body = None
     subject = None
-    # returns to variable security
+
     return 0
 
 def sign_out(s):
@@ -288,14 +305,27 @@ def sign_out(s):
 # starts a multiprocess for send_info
 def sendInfo(s, lst, sub, text, q):
     global p
-    p = multiprocessing.Process(target=send_info, args=(s, lst, sub, text, q))
-    p.start()
-
+    try:
+        if p.is_alive():
+            pass
+        else:
+            p = multiprocessing.Process(target=send_info, args=(s, lst, sub, text, q))
+            p.start()
+    except AttributeError:
+        p = multiprocessing.Process(target=send_info, args=(s, lst, sub, text, q))
+        p.start()
 # starts a multiprocess for send_warning
 def sendWarning(s, lst, q):
     global p
-    p = multiprocessing.Process(target=send_warning, args=(s, lst, q))
-    p.start()
+    try:
+        if p.is_alive():
+            pass
+        else:
+            p = multiprocessing.Process(target=send_warning, args=(s, lst, q))
+            p.start()
+    except AttributeError:
+        p = multiprocessing.Process(target=send_warning, args=(s, lst, q))
+        p.start()
 
 # Stops the current process
 def stop_process():

@@ -6,18 +6,23 @@ def create_table():
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
 
-    c.execute('CREATE TABLE IF NOT EXISTS cirkStudents(surname TEXT, name TEXT, index_num TEXT PRIMARY KEY, id_num TEXT, jmbg TEXT,'
-              ' telephone TEXT, mobile TEXT, email TEXT, i_value INTEGER)')
-    c.execute('CREATE TABLE IF NOT EXISTS addressStudents(index_num TEXT PRIMARY KEY, street TEXT, house_num TEXT, city TEXT, i_value INTEGER)')
-    c.execute('CREATE TABLE IF NOT EXISTS takenBooks(index_num TEXT, title TEXT, author TEXT, sign INTEGER, date_taken TEXT,'
-              'date_bring_back TEXT, PRIMARY KEY(index_num, sign))')
-    c.execute('CREATE TABLE IF NOT EXISTS dueBooks(index_num TEXT PRIMARY KEY, title TEXT, author TEXT, sign INTEGER, date_taken TEXT, '
+    c.execute('CREATE TABLE IF NOT EXISTS cirkStudents(surname TEXT, name TEXT, index_num TEXT PRIMARY KEY, '
+              'id_num TEXT, jmbg TEXT, telephone TEXT, mobile TEXT, email TEXT, i_value INTEGER)')
+    c.execute('CREATE TABLE IF NOT EXISTS addressStudents(index_num TEXT PRIMARY KEY, street TEXT, house_num TEXT, '
+              'city TEXT, i_value INTEGER)')
+    c.execute('CREATE TABLE IF NOT EXISTS takenBooks(index_num TEXT, title TEXT, author TEXT, sign INTEGER, '
+              'date_taken TEXT, date_bring_back TEXT, PRIMARY KEY(sign, index_num))')
+    # It seems that putting a TEXT field in the first place in a Composit key doesn't work
+    # therefore a INT field in placed first
+    c.execute('CREATE TABLE IF NOT EXISTS dueBooks(index_num TEXT PRIMARY KEY, title TEXT, author TEXT, sign INTEGER, '
+              'date_taken TEXT, '
               'date_bring_back TEXT)')
     c.execute('CREATE TABLE IF NOT EXISTS generations(index_part TEXT UNIQUE, i_value INTEGER PRIMARY KEY AUTOINCREMENT )')
     c.execute('CREATE TABLE IF NOT EXISTS lendBookEmails(sign INTEGER PRIMARY KEY)')
     # last three store unsent emails
-    c.execute('CREATE TABLE IF NOT EXISTS unsentWarnings(email TEXT, author TEXT, book TEXT, sign INTEGER, date_taken TEXT, date_back TEXT)')
-    c.execute('CREATE TABLE IF NOT EXISTS unsentInformation(email TEXT, number INTEGER, PRIMARY KEY(email, number))')
+    c.execute('CREATE TABLE IF NOT EXISTS unsentWarnings(email TEXT, author TEXT, book TEXT, sign INTEGER, '
+              'date_taken TEXT, date_back TEXT)')
+    c.execute('CREATE TABLE IF NOT EXISTS unsentInformation(email TEXT, number INTEGER, PRIMARY KEY(number, email))')
     c.execute('CREATE TABLE IF NOT EXISTS sub_msg_emails(sub TEXT, msg TEXT, number INTEGER PRIMARY KEY)')
 
     c.close()
@@ -65,15 +70,22 @@ def take_a_book(index_num, title, author, sign, days):
         lst = []
 
     else:
-        c.execute('INSERT INTO takenBooks(index_num, title, author, sign, date_taken, date_bring_back) '
+        try:
+            c.execute('INSERT INTO takenBooks(index_num, title, author, sign, date_taken, date_bring_back) '
               'VALUES (?, ?, ?, ?, ?, ?)', (index_num, title, author, sign, date_taken, date_bring_back))
 
-        messagebox.showinfo("Obaveštenje", "Knjiga "+str(author)+": "+str(title)+" je iznajmljena korisniku "+str(index_num))
-        # Send out a confirmation E-Mail
-        user = c.execute("SELECT email FROM cirkStudents WHERE index_num=?",(index_num,)).fetchone()[0]
-        # for independent processing
-        # Process(target=Sending.send_email, args=([user, author, title, sign, date_taken, date_bring_back])).start()
-        lst = user, author, title, sign, date_taken, date_bring_back
+            messagebox.showinfo("Obaveštenje",
+                                "Knjiga " + str(author) + ": " + str(title) + " je iznajmljena korisniku " + str(
+                                    index_num))
+            # Send out a confirmation E-Mail
+            user = c.execute("SELECT email FROM cirkStudents WHERE index_num=?", (index_num,)).fetchone()[0]
+            # for independent processing
+            # Process(target=Sending.send_email, args=([user, author, title, sign, date_taken, date_bring_back])).start()
+            lst = user, author, title, sign, date_taken, date_bring_back
+
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Greska", "Korisnik je vec zaduzen za jednu knjigu.")
+            lst = []
 
     conn.commit()
     c.close()
@@ -209,6 +221,7 @@ def checkDue(mode=""):
             messagebox.showinfo("Obavestenje", "Ne postoje nove knjige sa kasnjenjem.")
         else:
             messagebox.showinfo("Obavestenje", "Spisak uspesno azuriran.")
+        return 0
 
     # CHECKS IF THERE ARE DUE BOOKS AND LOADS THEM INTO THE TREEVIEW
     elif mode == "1":
@@ -421,11 +434,14 @@ def deleteTables():
     #                 'DROP TABLE IF EXISTS dueBooks;'
     #                 'DROP TABLE IF EXISTS generations;'
     #                 'DROP TABLE IF EXISTS lendBookEmails;'
-                    # 'DROP TABLE IF EXISTS unsentEmails;'
+                    # 'DROP TABLE IF EXISTS unsentInformation;'
+                    # 'DROP TABLE IF EXISTS unsentWarnings;'
                     # 'DROP TABLE IF EXISTS sub_msg_emails;')
     c.executescript('DROP TABLE IF EXISTS lendBookEmails;'
-                    'DROP TABLE IF EXISTS unsentEmails;'
-                    'DROP TABLE IF EXISTS sub_msg_emails;')
+                    'DROP TABLE IF EXISTS unsentInformation;'
+                    'DROP TABLE IF EXISTS unsentWarnings;'
+                    'DROP TABLE IF EXISTS sub_msg_emails;'
+                    'DROP TABLE IF EXISTS takenBooks;')
     conn.commit()
     c.close()
     conn.close()
@@ -458,7 +474,7 @@ def read_lendBookEmails():
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
 
-    lst = c.execute('SELECT cirkStudents.email, takenBooks.title, takenBooks.author, takenBooks.sign, takenBooks.date_taken,'
+    lst = c.execute('SELECT cirkStudents.email, takenBooks.author, takenBooks.title, takenBooks.sign, takenBooks.date_taken,'
                     'takenBooks.date_bring_back FROM takenBooks INNER JOIN lendBookEmails ON lendBookEmails.sign = takenBooks.sign '
                     'INNER JOIN cirkStudents ON cirkStudents.index_num = takenBooks.index_num').fetchall()
     print("read_lendBookEmails", lst)
@@ -499,7 +515,7 @@ def unsentWarning_delete(email):
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
 
-    c.execute('DELETE FROM unsetnWarning WHERE email = ?', (email,))
+    c.execute('DELETE FROM unsentWarning WHERE email = ?', (email,))
 
     conn.commit()
     c.close()
@@ -511,7 +527,7 @@ def unsentInformation_delete(email, sub):
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
 
-    c.execute('DELETE FROM unsetnInformation WHERE email = ? and number IN '
+    c.execute('DELETE FROM unsentInformation WHERE email = ? and number IN '
               '(SELECT number FROM sub_msg_emails WHERE sub = ?)', (email, sub))
 
     conn.commit()
@@ -527,13 +543,17 @@ def unsent_read(type=None):
     if type == 0:
         data = c.execute('SELECT unsentInformation.email, sub_msg_emails.sub, sub_msg_emails.msg '
                          'FROM unsentInformation INNER JOIN sub_msg_emails ON sub_msg_emails.number = unsentInformation.number').fetchall()
+        if len(data) == 0:
+            data = 0
 
     # Warning Emails
     elif type == 1:
         data = c.execute('SELECT * FROM unsentWarnings').fetchall()
+        if len(data) == 0:
+            data = 0
     else:
         # just in case i decide to add/change something
-        data = []
+        data = 0
 
     c.close()
     conn.close()
