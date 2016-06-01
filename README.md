@@ -1,6 +1,6 @@
 # LibraryProject
 A simple program I wrote to use in my library.
-<h1>Code is currently badly broken. I will fix it asap.</h1>
+
 <h1>About the program</h1>
 <h2>Intro</h2>
 This program is written in Python 3.5.1 + Tkinter + Sqlite3 and uses Requests 2.10.0 and Beautifulsoup 4.4.1 as dependencies.<br>
@@ -38,6 +38,9 @@ Changes: <br>
 2. New functions that store and send unsent Emails (due to connection loss, etc.)<br>
 3. Toplevel window with progressbar for sending out previously unsent Emails<br>
 4. Slight changes in some parts of the code<br>
+
+<h2>Version 1.5 Hotfix</h2>
+Fixed problems with multiprocessing (logging in and sending emails) and some minor code changes.
 
 <h1>Known issues</h1>
 1. Logging in afterwards won't send emails.
