@@ -408,7 +408,22 @@ def getDue():
         return []
 
 # Function for selecting e-mail addresses from certain generation of students
-def read_email(index_num):
+def read_email_all():
+
+    conn = sqlite3.connect('cirkulacija.db')
+    c = conn.cursor()
+
+    c.execute("SELECT email FROM cirkStudents ORDER BY email")
+    try:
+        new_data = c.fetchall()
+    except:
+        new_data = []
+
+    c.close()
+    conn.close()
+    return new_data
+
+def read_email_gen(index_num):
 
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()

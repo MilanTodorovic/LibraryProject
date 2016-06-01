@@ -118,7 +118,6 @@ class Login(Frame):
 class Window(ttk.Frame):
     # session variable for logging into the email
     session = None
-    q = Queue()
 
     def __init__(self, master = None):
         ttk.Frame.__init__(self, master)
@@ -135,17 +134,16 @@ class Window(ttk.Frame):
         # self.delUser() # subframe for deleting users
         self.session = Window.session # stores a Session object to pass around
         # self.checkLogin() # checks to see if the admin has logged in
-        self.q = Window.q # one Queue to rule them all
+        self.q = Queue() # one Queue to rule them all
         self.pack(fill=BOTH, expand=1)  # self is a Frame
         # print('Window.session u Window klasi', Window.session)
         # print('self.session u Window klasi', self.session)
 
         # self je glavni Frame u koji ja stavljam Notebook frame-ove i ostalo
 
-        '''Moved under if __name__ part'''
         # Checks if there are new due books on the start-up
-        # threading._start_new_thread(DataBase.checkDue, ("0",))
-
+        threading._start_new_thread(DataBase.checkDue, ("0",))
+        # DataBase.checkDue('0')
 
         # Checks if there are unsetn Emails about lending books
         if self.session is not None:
@@ -175,48 +173,46 @@ class Window(ttk.Frame):
     def establish_connection(self):
         self.un = self.lg_entry[0].get()
         self.pw = self.lg_entry[1].get()
-        self.id = self.master.after(100, self.uplabel)
+        # self.id = self.master.after(100, self.uplabel)
 
-        if self.session:
-            messagebox.showerror('Greska', 'Vec ste ulogovani.')
-            self.master.after_cancel(self.id)
+        if self.un == "" or self.pw == "":
+            messagebox.showerror('Greska', 'Morate uneti korisnicko ime i sifru.')
+            # self.master.after_cancel(self.id)
         else:
-            if self.un == "" or self.pw == "":
-                messagebox.showerror('Greska', 'Morate uneti korisnicko ime i sifru.')
-                self.master.after_cancel(self.id)
-            else:
-                p = Process(target=Sending.connecting, args=(self.un, self.pw, self.q))
-                p.start()
+            p = Process(target=Sending.connecting, args=(self.un, self.pw, self.q))
+            p.start()
+            self.uplabel()
 
     # updates label for login window inside the main window
     def uplabel(self):
-        self.s = None # stores session object
+        self.id = root.after(100, self.uplabel)
         try:
             x = self.q.get_nowait()
             if x == 0:
-                self.s == self.q.get_nowait()# gets the Session object from the queue, for latter debugging it isn't directly stored into self.session
-                print('Session object from queue', self.s)
-                self.session = self.s
-                Window.session = self.s
-                print('Window.session after x', Window.session)
-                self.f5.checkLogin()
+                self.session = self.q.get_nowait()
+                # print('self.session direktno od self.q', self.session)
+                Window.session = self.session
+                # print('Window.session after self.session', Window.session)
+                self.f5.checkLogin() # after successful login within the already open programm, we need to re-enable some buttons in the FifthFrame
                 self.checkUnsentBook()
                 messagebox.showinfo('Cestitamo',
-                                    'Uspesno ste se ulogovali.\nProgram se pokrece nakon sto pritisnete OK.')
+                                    'Uspesno ste se ulogovali.')
                 self.master.after_cancel(self.id)
+                del self.id
                 self.connect.destroy()
             elif x == 1:
                 messagebox.showerror('Greska',
                                      'Uneli ste pogresno korisnicko ime ili pogresnu sifru.\nPokusajte ponovo.')
                 self.master.after_cancel(self.id)
+                del self.id
             elif x == 2:
                 messagebox.showerror('Greska', 'Nije bilo moguce usposatviti vezu.\nPokusajte ponovo kasnije.')
                 self.master.after_cancel(self.id)
+                del self.id
             else:
                 self.lg_label[2].config(text=x)
         except Empty:
             pass
-        self.id = root.after(100, self.uplabel)
 
     def logout(self):
         if not self.session:
@@ -225,7 +221,7 @@ class Window(ttk.Frame):
             self.session = Sending.sign_out(self.session)
             Window.session = self.session
             messagebox.showinfo('Obavestenje', 'Uspesno ste se izlogovali.')
-            self.f5.checkLogin()
+            self.f5.checkLogin() # deactivates some buttons in the FifthFrame
 
     # Chesk if ther are unsent emails about lending a book
     def checkUnsentBook(self):
@@ -1076,21 +1072,18 @@ class ForthFrame(Frame):
 
 # Subframe for sending emails
 class FifthFrame(Frame):
-    # variables for storing unsetn mails and passing them on
-    security_w = None
-    security_i = None
 
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.master = master
         self.session = Window.session
-        self.q = Window.q
+        self.q = Queue()
         self.Send_email()
         self.checkLogin()
 
     def Send_email(self):
 
-        self.s_lables = ['Naslov imejla', 'Tekst imejla', 'Kome:', 'Indeks:']
+        self.s_lables = ['Naslov imejla', 'Tekst imejla \n(potpis se automatski generiše)', 'Kome:', 'Indeks:']
         # Variables
         self.var_om = StringVar() # for drop_m
         self.var_om1 = StringVar() # for drop_m1
@@ -1130,9 +1123,9 @@ class FifthFrame(Frame):
         self.drop_m.grid(row=0, column=1, padx=10, pady=5)
         self.l_title1[1].grid(row=2, column=0, padx=5, pady=5)
 
-        self.button_send = ttk.Button(self.s_w1, text="Posalji mejl", command = self.sendEmailInfo)
+        self.button_send = ttk.Button(self.s_w1, text="Pošalji mejl", command = self.sendEmailInfo)
         self.button_send.grid(row=4, column=0, padx=5, pady=5)
-        self.warning_desc = ttk.Label(self.s_w2, text='Molimo Vas da sacekate\nsa slanjem prethodnih mejlova\npre ukljucivanaj ove opcije.')
+        self.warning_desc = ttk.Label(self.s_w2, text='Molimo Vas da sačekate\nsa slanjem prethodnih mejlova\npre uključivanaj ove opcije.')
         self.warning_desc.grid(row=0, column=0)
         self.button_warning = ttk.Button(self.s_w2, text='Upozorenje', command=self.sendEmailWarning)
         self.button_warning.grid(row=1, column=0, padx=5, pady=10)
@@ -1164,61 +1157,56 @@ class FifthFrame(Frame):
         lst = DataBase.getDue()
         print('Za upozorenje ', lst)
         if len(lst)==0:
-            messagebox.showinfo('Obavestenje', 'Lista knjiga kasnjenja je prazna')
+            messagebox.showinfo('Obaveštenje', 'Lista knjiga s kašnjenjem je prazna')
         else:
             self.num_mail = len(lst)
             self.pbar['maximum'] = self.num_mail
             # security is used if a connection error occures
             # it receives a list of all the tuples (email, book...) which weren't sent
-            security = Sending.sendWarning(Window.session, lst, self.q)
-            self.id = self.master.after(100, self.uppbar_warning)
-            if security is not 0:
-                DataBase.unsent_store(security, None, None)
-                messagebox.showerror("Greska", "Doslo je do greske u vezi sa internetom."
-                                               "Neposlate poruke su sacuvane u sistemu i bice poslate kasnije.")
+            # security = Sending.sendWarning(Window.session, lst, self.q)
+            p = Process(target=Sending.send_warning, args=(Window.session, lst, self.q))
+            p.start()
+            self.uppbar_warning()
 
     def sendEmailInfo(self, *args):
         # lst = []
         self.amount = 1
-        if self.var_om.get() == 'Svi':
-            lst = DataBase.read_email('%') # gets emails as a list of tuples
-            print(lst)
-            self.num_mail = len(lst)
-            self.pbar['maximum'] = self.num_mail
-            sub = self.l_title_e.get()
-            text = self.s_textbox.get(1.0, END)
-            # security is used if a connection error occures
-            # it receives a list of all the emails which weren't sent
-            Sending.sendInfo(Window.session, lst, sub, text, self.q)
-            self.id = self.master.after(100, self.uppbar_info)
-            if FifthFrame.security_i:
-                DataBase.unsent_store(FifthFrame.security_i, sub, text)
-                messagebox.showerror("Greska", "Doslo je do greske u vezi sa internetom."
-                                               "Neposlate poruke su sacuvane u sistemu i bice poslate kasnije.")
-                FifthFrame.security_i = None
-
-        else:
-            gen = self.var_om1.get() # returns ('09',) as a string, not a tuple element
-            print(gen)
-            if gen == "" or gen == None:
-                messagebox.showerror('Greska', 'Ne postoji spisak generacija.')
+        sub = self.l_title_e.get()
+        text = self.s_textbox.get(1.0, END)
+        if not sub or len(text) == 0:
+            if not sub:
+                messagebox.showwarning('Upozorenje', 'Zaboravili ste da unesete naslov poruke.')
             else:
-                gen_1 = [s for s in gen.split("'") if s.isdigit()] # splits that string on quotes and checks which part are digits -> returns '09' as a string
-                print(gen_1)
-                lst = DataBase.read_email(*gen_1) # returns a list of tuples
-                print('lst u info mejl ', lst)
+                messagebox.showwarning('Upozorenje', 'Zaboravili ste da unesete tekst poruke.')
+        else:
+            if self.var_om.get() == 'Svi':
+                lst = DataBase.read_email_all() # gets emails as a list of tuples
+                print(lst)
                 self.num_mail = len(lst)
-                self.pbar['maximum']=self.num_mail
-                sub = self.l_title_e.get()
-                text = self.s_textbox.get(1.0, END)
-                Sending.sendInfo(Window.session, lst, sub, text, self.q)
-                self.id = self.master.after(100, self.uppbar_info)
+                self.pbar['maximum'] = self.num_mail
                 # security is used if a connection error occures
-                if FifthFrame.security_i:
-                    DataBase.unsent_store(FifthFrame.security_i, sub, text)
-                    messagebox.showerror("Greska", "Doslo je do greske u vezi sa internetom."
-                                                   "Neposlate poruke su sacuvane u sistemu i bice poslate kasnije.")
-                    FifthFrame.security_i = None
+                # it receives a list of all the emails which weren't sent
+                # Sending.sendInfo(Window.session, lst, sub, text, self.q)
+                p = Process(target= Sending.send_info, args=(Window.session, lst, sub, text, self.q))
+                p.start()
+                self.uppbar_info()
+            else:
+                gen = self.var_om1.get() # returns ('09',) as a string, not a tuple element
+                print(gen)
+                if gen == "" or gen == None:
+                    messagebox.showerror('Greška', 'Ne postoji spisak generacija.')
+                else:
+                    gen_1 = [s for s in gen.split("'") if s.isdigit()] # splits that string on quotes and checks which part are digits -> returns '09' as a string
+                    print(gen_1)
+                    lst = DataBase.read_email_gen(*gen_1) # returns a list of tuples
+                    print('lst u info mejl ', lst)
+                    self.num_mail = len(lst)
+                    self.pbar['maximum']=self.num_mail
+                    sub = self.l_title_e.get()
+                    text = self.s_textbox.get(1.0, END)
+                    p = Process(target=Sending.send_info, args=(Window.session, lst, sub, text, self.q))
+                    p.start()
+                    self.uppbar_info()
 
     # SETS NEWLY ENTERED VALUES USING _SETIT CLASS FROM TKINTER
     def refresh(self):
@@ -1232,38 +1220,52 @@ class FifthFrame(Frame):
 
     # UPDATES PROGRESSBAR
     def uppbar_info(self):
+        self.id = self.master.after(100, self.uppbar_info)
         try:
             x = self.q.get_nowait()
             if x == 0:
-                messagebox.showinfo('Obavestenje', 'Svi mejlovi su uspesno poslati')
+                messagebox.showinfo('Obaveštenje', 'Svi mejlovi su uspešno poslati')
                 self.master.after_cancel(self.id)
-                self.label_progress.config(text='Trenutno se ne salju mejlovi.')
+                self.label_progress.config(text='Trenutno se ne šalju mejlovi.')
+                del self.id
             elif x == 2:
-                FifthFrame.security_i = self.q.get_nowait()
+                l = self.q.get_nowait()
+                sub = self.q.get_nowait()
+                text = self.q.get_nowait()
                 self.master.after_cancel(self.id)
-                messagebox.showerror("Greska", "Doslo je do greske u vezi i slanje mejlova je odlozeno za kasnije.")
+                DataBase.unsent_store(l, sub, text)
+                messagebox.showerror("Greška", "Došlo je do greške u vezi sa internetom."
+                                                   "Neposlate poruke su sačuvane u sistemu i biće poslate kasnije.")
+                del self.id
             else:
                 self.pbar.step()
-                self.label_progress.config(text='Obavestenja: Salje se mejl ' + str(self.amount) + ' od ' + str(self.num_mail))
+                self.label_progress.config(text='Obaveštenja: Šalje se mejl ' + str(self.amount) + ' od ' + str(self.num_mail))
                 self.amount += 1
         except Empty:
             pass
-        self.id = self.master.after(100, self.uppbar_info)
 
     def uppbar_warning(self):
+        self.id = self.master.after(100, self.uppbar_warning)
         try:
             x = self.q.get_nowait()
             if x == 0:
-                messagebox.showinfo('Obavestenje', 'Svi mejlovi su uspesno poslati')
+                messagebox.showinfo('Obaveštenje', 'Svi mejlovi su uspešno poslati')
                 self.master.after_cancel(self.id)
-                self.label_progress.config(text='Trenutno se ne salju mejlovi.')
+                del self.id
+                self.label_progress.config(text='Trenutno se ne šalju mejlovi.')
+            elif x == 2: # error, next item is a list of unsent emails
+                lst = self.q.get_nowait()
+                DataBase.unsent_store(lst, None, None)
+                self.master.after_cancel(self.id)
+                del self.id
+                messagebox.showerror("Greška", "Došlo je do greške u vezi sa internetom."
+                                                   "Neposlate poruke su sačuvane u sistemu i biće poslate kasnije.")
             else:
                 self.pbar.step()
-                self.label_progress.config(text='Upozorenja: Salje se mejl ' + str(self.amount) + ' od ' + str(self.num_mail))
+                self.label_progress.config(text='Upozorenja: Šalje se mejl ' + str(self.amount) + ' od ' + str(self.num_mail))
                 self.amount += 1
         except Empty:
             pass
-        self.id = self.master.after(100, self.uppbar_warning)
 
     # REMOVES / ADDS AN OPTIONMENU AND BUTTON FOR ADDITIONAL SPECIFICATION
     def checkDrop(self, *args):
@@ -1352,19 +1354,19 @@ class SixthFrame(Frame):
             self.du_entries[i].delete(0, END)
 
         index = self.du_strVar.get()
-        self.li_list = DataBase.read_db(index, None, None, None, None, None, None, None, None)
+        li_list = DataBase.read_db(index, None, None, None, None, None, None, None, None)
         # print('du_loadInfo funckija:', self.li_list)
 
-        if len(self.li_list) > 0:
+        if len(li_list) > 0:
             self.user_exists=1
             j = 0
             for i in range(0, len(self.du_entries)):
                 if j == 2: # number 2 in the list is the index number
                     j = j + 1
-                    self.du_entries[i].insert(END, self.li_list[0][j])
+                    self.du_entries[i].insert(END, li_list[0][j])
                     j = j + 1
                 else:
-                    self.du_entries[i].insert(END, self.li_list[0][j])
+                    self.du_entries[i].insert(END, li_list[0][j])
                     j = j + 1
             for i in range(0, len(self.du_entries)):
                 self.du_entries[i].config(state=DISABLED)
@@ -1395,8 +1397,10 @@ class SixthFrame(Frame):
 def on_closing():
     try:
         if Sending.p.is_alive():
-            if messagebox.askyesno('Upozorenje', 'Slanje mejlova jos nije okoncano.\n'
-                                                 'Da li ipak zelite da ugasite program?'):
+            if messagebox.askyesno('Upozorenje', 'Slanje mejlova još nije okončano.\n'
+                                                 'Da li ipak želite da ugasite program? '
+                                                 '\n(Neposlati mejlovi će biti sačuvani za slanje '
+                                                 '\nprilikom sledećeg pokretanja programa)'):
                 Sending.stop_process()
                 if Sending.current_info:
                     new_lst = [i for i in Sending.glst if not i in Sending.current_info]
@@ -1411,8 +1415,8 @@ def on_closing():
                     Sending.sign_out(Window.session)
                 root.destroy()
     except:
-        if messagebox.askokcancel("Izlaz", "Da li zelite da ugasite program?\n"
-                                           "Bicete automatski izlogovani prilikom napustanja programa."):
+        if messagebox.askokcancel("Izlaz", "Da li želite da ugasite program?\n"
+                                           "Bićete automatski izlogovani prilikom napuštanja programa."):
             if Window.session:
                 Sending.sign_out(Window.session)
             root.destroy()
@@ -1424,6 +1428,7 @@ if __name__ == '__main__':
     login.geometry('300x140')
     lg = Login(login)
     login.mainloop()
+    # this part was because of some serious errors, dunno if it is needed any longer
     while True:
         try:
             if login.state == 'normal':
@@ -1439,9 +1444,6 @@ if __name__ == '__main__':
     # DataBase.deleteTables()
     # DataBase.create_table()
     app = Window(root) # root se prosledjuje u __init__ i zauzima mesto master
-    # checks if there are due books
-    DataBase.checkDue('0')
-
     root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
 

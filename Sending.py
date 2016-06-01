@@ -2,8 +2,9 @@ import requests
 from requests import ConnectionError
 import time
 import bs4
-import multiprocessing
 import DataBase
+
+'''CHANGE SOME GLOBAL VARIABLES. NOT ALL ARE NEEDED'''
 
 # URL is GLOBAL
 
@@ -43,6 +44,9 @@ def connecting(username, password, q):
     except TimeoutError:
         q.put(2)
         q.close()
+        del s
+        del password
+        del username
         return 0
 
     # allow_redirects=False omogucava Location u headers
@@ -55,6 +59,9 @@ def connecting(username, password, q):
             q.put('Neuspelo logovanje')
             q.put(1)
             q.close()
+            del s
+            del password
+            del username
             return 0
     else:
         print('Logging in: ',r.status_code)
@@ -71,8 +78,10 @@ def connecting(username, password, q):
         q.put_nowait(0)
         q.put_nowait(s)
         q.close()
-        q.join_thread()
-
+        # q.join_thread()
+        del s
+        del password
+        del username
         return 0
 
 
@@ -88,11 +97,11 @@ def send_email(s, lst, *args):
     # recipient = 'some@email.com'
     recipient = lst[0]
     subject = 'Zaduzenje'
-    body = "Postovani/Postovana,\n\n" \
-               "Ovo je automatska poruka koja Vas obavestava da ste se zaduzili za knjigu " \
+    body = "Poštovana/Poštovani,\n\n" \
+               "Ovo je automatska poruka koja Vas obaveštava da ste se zadužili za knjigu " \
                ""+lst[1]+": '"+lst[2]+"', signatura: "+str(lst[3])+".\n" \
-                "Datum uzimanja: "+lst[4]+"\nRok za vracanje: "+lst[5]+"\n\n" \
-                "S postovanjem,\nMilan Todorovic\n\nBiblioteka Katedre za germanistiku\nFiloloski fakultet\n" \
+                "Datum uzimanja: "+lst[4]+"\nRok za vraćanje: "+lst[5]+"\n\n" \
+                "S poštovanjem,\nMilan Todorović\n\nBiblioteka Katedre za germanistiku\nFilološki fakultet\n" \
                 "Univerzitet u Beogradu\nStudentski trg 3\nTel: 011/2021-698\nRadno vreme: 9.00-17.00"
 
     files = {"startMessage":(None, "1"),
@@ -136,6 +145,10 @@ def send_email(s, lst, *args):
     # r = s.get(r.headers['Location'])
     # print('Redirected to home page: ',r.status_code)
     print('User successfully notified about taken book.')
+    del r
+    del send
+    del compose
+
     return 0
 
 
@@ -190,9 +203,11 @@ def send_warning(s, lst, q, *args):
             print('Loading left frame: ', l.status_code)
             print('Loading right frame: ', r.status_code)
         except ConnectionError:
+            q.put_nowait(2)
+            l = [i for i in glst if i[0] not in current_warning]
+            q.put_nowait(l) # returns a list to lst in uppbar()
             q.close()
-            # returns to variable security
-            return [i for i in glst if i[0] not in current_warning]
+            # return [i for i in glst if i[0] not in current_warning]
 
 
         time.sleep(1)
@@ -235,6 +250,9 @@ def send_info(s, lst, sub, text, q):
         q.put_nowait(1)
         recipient = i[0]
 
+        mail_signature = "\nS poštovanjem,\nMilan Todorović\n\nBiblioteka Katedre za germanistiku\nFilološki fakultet\n" \
+                "Univerzitet u Beogradu\nStudentski trg 3\nTel: 011/2021-698\nRadno vreme: 9.00-17.00"
+
         files = {"startMessage": (None, "1"),
                      "session": (None, "1"),
                      "passed_id": (None, ""),
@@ -243,7 +261,7 @@ def send_info(s, lst, sub, text, q):
                      "send_to_bcc": (None, ""),
                      "subject": (None, subject),
                      "mailprio": (None, "3"),
-                     "body": (None, body),
+                     "body": (None, body+mail_signature),
                      "send": (None, "Send"),
                      "attachfile": ("", ""),
                      "MAX_FILE_SIZE": (None, "20971520"),
@@ -264,7 +282,8 @@ def send_info(s, lst, sub, text, q):
             q.put_nowait(2)
             n = [i[0] for i in glst if i[0] not in current_info]
             q.put_nowait(n)
-            # return [i[0] for i in glst if i[0] not in current_info]
+            q.put_nowait(sub)
+            q.put_nowait(text)
             q.close()
 
         time.sleep(1)
@@ -301,31 +320,6 @@ def sign_out(s):
     print('Signed out: ', r.status_code)
     # returns None so that the Session object can be checked later on
     return None
-
-# starts a multiprocess for send_info
-def sendInfo(s, lst, sub, text, q):
-    global p
-    try:
-        if p.is_alive():
-            pass
-        else:
-            p = multiprocessing.Process(target=send_info, args=(s, lst, sub, text, q))
-            p.start()
-    except AttributeError:
-        p = multiprocessing.Process(target=send_info, args=(s, lst, sub, text, q))
-        p.start()
-# starts a multiprocess for send_warning
-def sendWarning(s, lst, q):
-    global p
-    try:
-        if p.is_alive():
-            pass
-        else:
-            p = multiprocessing.Process(target=send_warning, args=(s, lst, q))
-            p.start()
-    except AttributeError:
-        p = multiprocessing.Process(target=send_warning, args=(s, lst, q))
-        p.start()
 
 # Stops the current process
 def stop_process():
