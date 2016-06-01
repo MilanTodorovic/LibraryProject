@@ -42,6 +42,9 @@ Changes: <br>
 <h2>Version 1.5 Hotfix</h2>
 Fixed problems with multiprocessing (logging in and sending emails) and some minor code changes.
 
+<h2>Version 1.5.6</h2>
+Testing out the tix.Balloon and style feature. No important changes in the program itself.
+
 <h1>Known issues</h1>
 1. Logging in afterwards won't send emails.
 2. After getting the message, that all unsent emails were sent, the program crashes.
