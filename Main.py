@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import ttk
+from tkinter import tix
 from tkinter import _setit
 import datetime
 import DataBase
@@ -9,17 +10,12 @@ from multiprocessing import Process, Queue, freeze_support
 from queue import Empty
 import threading
 
-"""Version 1.5.0
+"""Version 1.5.6
 Saving unsent notifications when lending a book
 and sending them the moment you log into you email account."""
 
 
 # TO DO
-
-# nece svima da salje mejlove, daje praznu listu
-
-# self.matser u FifthFrame umesto root
-# proveriti da li to uopste radi
 
 # prozor za profesore
 # iznajmljivanje knjiga za profesore
@@ -124,7 +120,7 @@ class Window(ttk.Frame):
 
         # All the ttk.notebook frames
         self.master = master
-        self.master.title("Cirkulacija V1.5.0")
+        self.master.title("Cirkulacija V1.5.6")
         self.init_window() # initializes all the subframes and starts the first frame
 
         # self.user_entry_window() # subframe for eneterying a new user
@@ -185,7 +181,7 @@ class Window(ttk.Frame):
 
     # updates label for login window inside the main window
     def uplabel(self):
-        self.id = root.after(100, self.uplabel)
+        self.id = self.master.after(100, self.uplabel)
         try:
             x = self.q.get_nowait()
             if x == 0:
@@ -329,7 +325,7 @@ class Window(ttk.Frame):
         top.title('O programu')
         top.geometry('250x100')
         top.focus_set()
-        helplist = ['Turbo Cirkulator 3000', 'Verzija: 1.5.0', 'Copyright Milan Todorovic 2016-',
+        helplist = ['Turbo Cirkulator 3000', 'Verzija: 1.5.6', 'Copyright Milan Todorovic 2016-',
                     'Beta testeri: Danijel Milosevic,']
         helpLabels = [ttk.Label(top, text=i) for i in helplist]
         for i in range(0, len(helpLabels)):
@@ -470,6 +466,8 @@ class FirstFrame(Frame):
         self.e_date.grid(row = 3, column = 1, pady =5)
         self.e_date_help = ttk.Label(self.p1_iw, text = "dd-mm-yyyy", width = 15, anchor = W)
         self.e_date_help.grid(row = 3, column = 2, padx=10, pady=10)
+        tix_ballon_date_help = tix.Balloon(self.p1_iw)
+        tix_ballon_date_help.bind_widget(self.e_date_help, balloonmsg = 'Format u kom treba uneti datum.')
 
         self.checkState()
 
@@ -876,6 +874,10 @@ class ThirdFrame(Frame):
         self.date_l_db.grid(row=2, column=1, padx=5, pady=5)
         self.new_date = ttk.Label(self.p1_b, text="Novi datum:", anchor=W)
         self.new_date.grid(row=3,column=0, sticky=W, padx=5, pady=5)
+        new_date_help = tix.Balloon(self.p1_b)
+        new_date_help.bind_widget(self.new_date,
+                                  balloonmsg='Ovaj datum ce biti unet u bazu podataka kao datum uzimanja.\n'
+                                             'Knjiga se automatski produzava na 14 dana.')
         self.new_date_1 = ttk.Label(self.p1_b, text=str(datetime.date.today().strftime("%d-%m-%Y")), anchor=W)
         self.new_date_1.grid(row=3, column=1, padx=5, pady=5)
 
@@ -1040,6 +1042,11 @@ class ForthFrame(Frame):
         # the lambda function is located at the bottom of the script
         self.button_ut.grid(row = 5, column = 3, sticky = NSEW, padx = 5, pady = 5)
 
+        index_info = ttk.Label(self.p_ut, text='?', font='bold')
+        index_info.grid(row=0, column=2, padx=5, pady=5, sticky=W)
+        tix_balloon_index_info = tix.Balloon(self.p_ut)
+        tix_balloon_index_info.bind_widget(index_info, balloonmsg = 'Indeks se ne moze ipravljati ovim putem.')
+
     # loads information into the fields for correction/addition of user information
     def loadInfo(self, index=None, *args):
         for i in range(1,11):
@@ -1083,7 +1090,7 @@ class FifthFrame(Frame):
 
     def Send_email(self):
 
-        self.s_lables = ['Naslov imejla', 'Tekst imejla \n(potpis se automatski generiše)', 'Kome:', 'Indeks:']
+        self.s_lables = ['Naslov imejla:', 'Tekst imejla:', 'Kome:', 'Indeks:']
         # Variables
         self.var_om = StringVar() # for drop_m
         self.var_om1 = StringVar() # for drop_m1
@@ -1142,14 +1149,11 @@ class FifthFrame(Frame):
         self.label_progress.pack(side=LEFT, padx=10)
         self.inner_frame.grid(row=1, column=0)
 
-
         self.s_w.grid(row=0, column=0, padx=10, pady=10)
         self.s_w1.grid(row=0, column=0, pady=10)
         self.s_w2.grid(row=1, column=0, pady=10)
         self.local_frame.grid(row=0, column=1)
         self.local_frame1.grid(row=0, column=0)
-
-        # self.q = Queue()
 
     def sendEmailWarning(self):
         # lst = []
@@ -1438,7 +1442,7 @@ if __name__ == '__main__':
         except:
             break
 
-    root = Tk()
+    root = tix.Tk()
     root.geometry("920x580")
     root.resizable(width=FALSE, height=FALSE)
     # DataBase.deleteTables()
