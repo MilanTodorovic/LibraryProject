@@ -10,13 +10,17 @@ from multiprocessing import Process, Queue, freeze_support
 from queue import Empty
 import threading
 
-"""Version 1.5.6
-Saving unsent notifications when lending a book
-and sending them the moment you log into you email account."""
+"""Version 1.6.0
+1. Bug fixes and some additional features.
+2. Added a button that displays all information
+about the current user selected in the treeview.
+3. Added a new function into the DataBase file,
+mainly to seperate some multitool functions.
+4. Slight layout changes in the FirstFrame"""
 
 
 # TO DO
-
+# remove all the print statements used for debugging
 # prozor za profesore
 # iznajmljivanje knjiga za profesore
 
@@ -120,16 +124,10 @@ class Window(ttk.Frame):
 
         # All the ttk.notebook frames
         self.master = master
-        self.master.title("Cirkulacija V1.5.6")
+        self.master.title("Cirkulacija V1.6.0")
         self.init_window() # initializes all the subframes and starts the first frame
 
-        # self.user_entry_window() # subframe for eneterying a new user
-        # self.takeAbook() # subframe for taking a book etc.
-        # self.update_table() # subframe for changing user information
-        # self.Send_email() # subframe for sending warnings and information
-        # self.delUser() # subframe for deleting users
         self.session = Window.session # stores a Session object to pass around
-        # self.checkLogin() # checks to see if the admin has logged in
         self.q = Queue() # one Queue to rule them all
         self.pack(fill=BOTH, expand=1)  # self is a Frame
         # print('Window.session u Window klasi', Window.session)
@@ -241,6 +239,7 @@ class Window(ttk.Frame):
     # lst is the resposne from reading the DB
     def sendUnsentEmails(self, lst):
         window = Toplevel()
+        window.focus_set()
         l = ttk.Label(window, text='Slanje neposlatih mejlova')
         l.pack()
         pb = ttk.Progressbar(window, value=0, maximum=len(lst), length=200)
@@ -250,10 +249,11 @@ class Window(ttk.Frame):
             if response == 0:
                 pb.step()
         messagebox.showinfo("Obavestenje", "Sva neposlata obavestenja o pozajmici knjige su uspesno poslata.")
-        window.quit()
+        window.destroy()
 
     def sendUnsentWarnings(self, lst):
         window = Toplevel()
+        window.focus_set()
         l = ttk.Label(window, text='Slanje neposlatih mejlova')
         l.pack()
         pb = ttk.Progressbar(window, value=0, maximum=len(lst), length=200)
@@ -263,10 +263,11 @@ class Window(ttk.Frame):
             if response == 0:
                 pb.step()
         messagebox.showinfo("Obavestenje", "Sva neposlata upozorenja su uspesno poslata.")
-        window.quit()
+        window.destroy()
 
     def sendUnsentInformation(self, lst):
         window = Toplevel()
+        window.focus_set()
         l = ttk.Label(window, text='Slanje neposlatih mejlova')
         l.pack()
         pb = ttk.Progressbar(window, value=0, maximum=len(lst), length=200)
@@ -276,7 +277,7 @@ class Window(ttk.Frame):
             if response == 0:
                 pb.step()
         messagebox.showinfo("Obavestenje", "Sva neposlata obavestenja e su uspesno poslata.")
-        window.quit()
+        window.destroy()
 
     # MAIN FRAMES FOR ANY FURTHER WINDOWS
     def init_window(self):
@@ -325,7 +326,7 @@ class Window(ttk.Frame):
         top.title('O programu')
         top.geometry('250x100')
         top.focus_set()
-        helplist = ['Turbo Cirkulator 3000', 'Verzija: 1.5.6', 'Copyright Milan Todorovic 2016-',
+        helplist = ['Turbo Cirkulator 3000', 'Verzija: 1.6.0', 'Copyright Milan Todorovic 2016-',
                     'Beta testeri: Danijel Milosevic,']
         helpLabels = [ttk.Label(top, text=i) for i in helplist]
         for i in range(0, len(helpLabels)):
@@ -359,7 +360,7 @@ class FirstFrame(Frame):
 
         # Statusbar
         self.sb = ttk.Label(self, relief=SUNKEN, anchor=W)
-        self.sb.grid(row=4, column=0, columnspan=5, sticky=NSEW, pady=3)
+        self.sb.grid(row=4, column=0, columnspan=6, sticky=NSEW, pady=5)
 
         # TreeView
         self.column_names=['Student','Indeks', 'Adresa', 'Br. lic. karte','JMBG','Fiksni','Mobilni','Mejl']
@@ -367,15 +368,17 @@ class FirstFrame(Frame):
 
         for i in self.column_names:
             self.tree.heading(i, text=i)
-            self.tree.heading(i, text=i, command=lambda col=i: self.treeview_sort_column(self.tree, col, False))
+            # self.tree.heading(i, text=i, command=lambda _col=i: self.treeview_sort_column(self.tree,_col, False))
 
         self.tree.grid(row=3, column=0, columnspan=8, sticky=NSEW)
 
         # Buttons
-        self.searchButton = ttk.Button(self, text = "Pretraži", command = self.print_entry, width = 10)
-        self.searchButton.grid(row = 2, column = 3, padx = 10, pady = 10)
-        self.deleteButton = ttk.Button(self, text = "Izbriši", command= lambda *args: self.emptyTree(), width = 10)
-        self.deleteButton.grid(row = 2, column = 4, padx = 10, pady = 10)
+        self.searchButton = ttk.Button(self, text = "Pretraži", command = self.print_entry, width = 12)
+        self.searchButton.grid(row = 1, column = 2, padx = 10, pady = 10)
+        self.deleteButton = ttk.Button(self, text = "Izbriši", command= lambda *args: self.emptyTree(), width = 11)
+        self.deleteButton.grid(row = 1, column = 3, padx = 10, pady = 10)
+        self.displayButton = ttk.Button(self, text="Prikaži podatke", command=lambda *args: self.tree_column_open(), width=18)
+        self.displayButton.grid(row=2, column=2, columnspan=2, padx=10, pady=10)
 
         # Dropdown Selection
         self.l_lista = ttk.Label(self, text = "Tabele:", width = 8, anchor = W)
@@ -488,13 +491,6 @@ class FirstFrame(Frame):
 
         if self.table_chosen == "Studenti":
 
-            # for i in (1,3):
-            #     self.tree.column('#'+str(i), minwidth=170, width=170)
-            # for i in (2,4,6,7):
-            #     self.tree.column('#'+str(i), minwidth=70, width=70)
-            # self.tree.column('#5', minwidth=100, width=100)
-            # self.tree.column('#8', minwidth=150, width=150)
-
             self.index_s= self.searchIndex.get()
             self.name_s = self.searchName.get()
             self.surname_s = self.searchSurname.get()
@@ -561,6 +557,124 @@ class FirstFrame(Frame):
     def emptyTree(self):
         for i in self.tree.get_children():
             self.tree.delete(i)
+
+    # opens up a new vindow with more user details
+    def tree_column_open(self):
+        curItem = self.tree.focus()
+        print(self.tree.item(curItem))
+        items = self.tree.item(curItem)
+        # checks if an user is selected in the treeview
+        if len(items['values']) > 0:
+            index = str(items['values'][1]) # the treeview stores strings that contain numbers as int and now I have to convert back
+            if len(index) < 6:
+                print('0'+index)
+                index = '0'+index
+                user_data = DataBase.read_db(index, None, None, None, None, None, None, None, None)[0]
+            else:
+                print(index)
+                user_data = DataBase.read_db(index, None, None, None, None, None, None, None, None)[0]
+            print(user_data)
+            taken_books = None
+            overdue_books = None
+
+            window = Toplevel()
+            window.title('Pregled ličnih podataka korisnika')
+            f = ttk.LabelFrame(window, text='Podaci o korisniku')
+            f.pack(fill=BOTH)
+            WIDTH = 28
+            PADX = 5
+            PADY = 5
+            # Labels
+            index_num = ttk.Label(f, text='Indeks: ', anchor=W)
+            index_num.grid(row=0, column=0, sticky=W, padx=PADX, pady=PADY)
+            surname = ttk.Label(f, text='Prezime: ', anchor=W)
+            surname.grid(row=1, column=0, sticky=W, padx=PADX, pady=PADY)
+            name = ttk.Label(f, text='Ime: ', anchor=W)
+            name.grid(row=2, column=0, sticky=W, padx=PADX, pady=PADY)
+            id_num = ttk.Label(f, text='Br. lic. karte: ', anchor=W)
+            id_num.grid(row=3, column=0, sticky=W, padx=PADX, pady=PADY)
+            jmbg = ttk.Label(f, text='JMBG: ', anchor=W)
+            jmbg.grid(row=4, column=0, sticky=W, padx=PADX, pady=PADY)
+            telephone = ttk.Label(f, text='Telefon: ', anchor=W)
+            telephone.grid(row=5, column=0, sticky=W, padx=PADX, pady=PADY)
+            mobile = ttk.Label(f, text='Mobilni: ', anchor=W)
+            mobile.grid(row=6, column=0, sticky=W, padx=PADX, pady=PADY)
+            email = ttk.Label(f, text='Imejl: ', anchor=W)
+            email.grid(row=7, column=0, sticky=W, padx=PADX, pady=PADY)
+            street = ttk.Label(f, text='Ulica: ', anchor=W)
+            street.grid(row=0, column=2, sticky=W, padx=PADX, pady=PADY)
+            str_number = ttk.Label(f, text='Broj: ', anchor=W)
+            str_number.grid(row=1, column=2, sticky=W, padx=PADX, pady=PADY)
+            city = ttk.Label(f, text='Mesto/Grad: ', anchor=W)
+            city.grid(row=2, column=2, sticky=W, padx=PADX, pady=PADY)
+            # Entries
+            index_num_e = ttk.Entry(f, width=WIDTH)
+            index_num_e.insert(END, index)
+            index_num_e.config(state=DISABLED)
+            index_num_e.grid(row=0, column=1, sticky=W, padx=PADX, pady=PADY)
+            surname_e = ttk.Entry(f, width=WIDTH)
+            surname_e.insert(END, user_data[0])
+            surname_e.config(state=DISABLED)
+            surname_e.grid(row=1, column=1, sticky=W, padx=PADX, pady=PADY)
+            name_e = ttk.Entry(f, width=WIDTH)
+            name_e.insert(END, user_data[1])
+            name_e.config(state=DISABLED)
+            name_e.grid(row=2, column=1, sticky=W, padx=PADX, pady=PADY)
+            id_num_e = ttk.Entry(f, width=WIDTH)
+            id_num_e.insert(END, user_data[2])
+            id_num_e.config(state=DISABLED)
+            id_num_e.grid(row=3, column=1, sticky=W, padx=PADX, pady=PADY)
+            jmbg_e = ttk.Entry(f, width=WIDTH)
+            jmbg_e.insert(END, user_data[3])
+            jmbg_e.config(state=DISABLED)
+            jmbg_e.grid(row=4, column=1, sticky=W, padx=PADX, pady=PADY)
+            telephone_e = ttk.Entry(f, width=WIDTH)
+            telephone_e.insert(END, user_data[4])
+            telephone_e.config(state=DISABLED)
+            telephone_e.grid(row=5, column=1, sticky=W, padx=PADX, pady=PADY)
+            mobile_e = ttk.Entry(f, width=WIDTH)
+            mobile_e.insert(END, user_data[5])
+            mobile_e.config(state=DISABLED)
+            mobile_e.grid(row=6, column=1, sticky=W, padx=PADX, pady=PADY)
+            email_e = ttk.Entry(f, width=WIDTH)
+            email_e.insert(END, user_data[6])
+            email_e.config(state=DISABLED)
+            email_e.grid(row=7, column=1, sticky=W, padx=PADX, pady=PADY)
+            street_e = ttk.Entry(f, width=WIDTH)
+            street_e.insert(END, user_data[7])
+            street_e.config(state=DISABLED)
+            street_e.grid(row=0, column=3, sticky=W, padx=PADX, pady=PADY)
+            str_number_e = ttk.Entry(f, width=WIDTH)
+            str_number_e.insert(END, user_data[8])
+            str_number_e.config(state=DISABLED)
+            str_number_e.grid(row=1, column=3, sticky=W, padx=PADX, pady=PADY)
+            city_e = ttk.Entry(f, width=WIDTH)
+            city_e.insert(END, user_data[9])
+            city_e.config(state=DISABLED)
+            city_e.grid(row=2, column=3, sticky=W, padx=PADX, pady=PADY)
+
+            f1 = ttk.Labelframe(window, text='Iznajmljene knjige')
+            f1.pack(fill=BOTH)
+            column_names_1 = ['Autor', 'Naslov', 'Signatura', 'Datum uzimanja', 'Rok vracanja']
+            tree = ttk.Treeview(f1, columns=(column_names_1), show='headings')
+            for i in column_names_1:
+                tree.heading(i, text=i)
+            tree.column('#' + str(1), minwidth=120, width=120)
+            tree.column('#' + str(2), minwidth=120, width=120)
+            tree.column('#' + str(3), minwidth=50, width=50)
+            tree.column('#' + str(4), minwidth=60, width=60)
+            tree.column('#' + str(5), minwidth=60, width=60)
+
+            tree.pack(fill=BOTH, expand=True)
+            # self.emptyTree()
+
+            takenBooks = DataBase.readLendBoosk(index)  # LOADING DUE BOOKS INTO THE TREEVIEW
+            print(takenBooks)
+            for d in takenBooks:
+                tree.insert('', END, values=(d[0], d[1], d[2], d[3], d[4]))
+        else:
+            pass
+
 
 
     # activates/deactivates certain ttk.entries based on the selection of the optionmenu menu
@@ -642,16 +756,17 @@ class FirstFrame(Frame):
         pass
 
     # DOESN'T WORK AT ALL
-    def treeview_sort_column(self, tv, col, reverse):
-        l = [(tv.set(k, col), k) for k in tv.get_children('')]
-        l.sort(reverse=reverse)
-
-        # rearrange items in sorted positions
-        for i, (val, k) in enumerate(l):
-            tv.move(k, '', i)
-
-        # reverse sort next time
-        tv.heading(col, command=lambda: self.treeview_sort_column(tv, col, not reverse))
+    # def treeview_sort_column(self, tree, col, reverse):
+    #     print('tree view sort')
+    #     l = [(tree.set(k, col), k) for k in tree.get_children('')]
+    #     l.sort(reverse=reverse)
+    #
+    #     # rearrange items in sorted positions
+    #     for i, (val, k) in enumerate(l):
+    #         tree.move(k, '', i)
+    #
+    #     # reverse sort next time
+    #     tree.heading(col, command=lambda: self.treeview_sort_column(tree, col, not reverse))
 
 
 # Subframe for adding new users
@@ -1359,19 +1474,14 @@ class SixthFrame(Frame):
 
         index = self.du_strVar.get()
         li_list = DataBase.read_db(index, None, None, None, None, None, None, None, None)
-        # print('du_loadInfo funckija:', self.li_list)
+        print('du_loadInfo funckija:', li_list)
 
         if len(li_list) > 0:
             self.user_exists=1
             j = 0
             for i in range(0, len(self.du_entries)):
-                if j == 2: # number 2 in the list is the index number
-                    j = j + 1
-                    self.du_entries[i].insert(END, li_list[0][j])
-                    j = j + 1
-                else:
-                    self.du_entries[i].insert(END, li_list[0][j])
-                    j = j + 1
+                self.du_entries[i].insert(END, li_list[0][j])
+                j = j + 1
             for i in range(0, len(self.du_entries)):
                 self.du_entries[i].config(state=DISABLED)
         else:
@@ -1380,14 +1490,15 @@ class SixthFrame(Frame):
                 self.du_entries[i].config(state=DISABLED)
             return 0
 
-    # Deletes user
+    # Deletes user if possible
+    # checks beforehand if the user still owes books
     def delete_users(self):
         if self.user_exists:
             x = DataBase.delete_user(self.du_index.get())
             if x:
-                messagebox.showerror('Greska','Nije moguce izbrisati korisnika, jer jos duguje knjige.')
+                messagebox.showerror('Greška','Nije moguće izbrisati korisnika, jer još duguje knjige.')
             else:
-                messagebox.showinfo('Obavestenje', 'Korisnik je uspesno izbrisan iz baze podataka.')
+                messagebox.showinfo('Obaveštenje', 'Korisnik je uspešno izbrisan iz baze podataka.')
                 for i in range(0, len(self.du_entries)):
                     self.du_entries[i].config(state=NORMAL)
                 for i in range(0, len(self.du_entries)):
@@ -1395,7 +1506,7 @@ class SixthFrame(Frame):
                 for i in range(0, len(self.du_entries)):
                     self.du_entries[i].config(state=DISABLED)
         else:
-            messagebox.showerror('Greska', 'Unesite ispravan indeks korisnika.')
+            messagebox.showerror('Greška', 'Unesite ispravan indeks korisnika.')
 
 # event function that performs a log out before closing the window
 def on_closing():

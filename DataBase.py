@@ -191,6 +191,19 @@ def read_db(index_num=None, name_db = None, surname_db = None, city_db = None, a
     conn.close()
     return new_data # Returns data
 
+def readLendBoosk(index):
+    conn = sqlite3.connect('cirkulacija.db')
+    c = conn.cursor()
+
+    c.execute(
+        'SELECT author, title, sign, date_taken, date_bring_back FROM takenBooks WHERE index_num = ?', (index,))
+    books = c.fetchall()
+
+    c.close()
+    conn.close()
+    return books
+
+# reads from DB to see if some books are overdue
 def checkDue(mode=""):
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
