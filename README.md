@@ -52,8 +52,8 @@ Testing out the tix.Balloon and style feature. No important changes in the progr
 4. Small layout changes. More planned.
 
 <h1>Known issues</h1>
-1. <strike>Logging in afterwards won't send emails.</strike> FIXED: The session object couldn't be saved to some variable for unknownreasons
-2. <strike>After getting the message, that all unsent emails were sent, the program crashes.</strike> FIXED: I was using .quit() on Toplevel windows instead of .destroy()
+1. <strike>Logging in afterwards won't send emails.</strike> <br>FIXED: The session object couldn't be saved to a variable for unknown reasons
+2. <strike>After getting the message, that all unsent emails were sent, the program crashes.</strike> <br>FIXED: I was using .quit() on Toplevel windows instead of .destroy()
 
 <h1>TO DO</h1>
 1. <strike>Enable saving unsent e-mails to a file/database in case of internet connection loss. (Partially done with 1.4.5)</strike>
