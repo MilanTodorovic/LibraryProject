@@ -24,13 +24,13 @@ using multiprocessing and queues) of the number of sent Emails.<br>
 It has a big number of error checking and prevention from breaking (mostly by the user).
 
 <h1>Updates</h1>
-<strike>
+
 <h2>Version 1.3</h2>
 Some radical changes in the structure of the Main.py file. The <b>Window</b> class broken down into multiple classes, each for every individual <b>ttk.Notebook</b> frame. This might result in some bugs, but I hope it won't.
 
 <h2>Version 1.4.5</h2>
 Added a mechanism to store unsend Emails in case of connection issues or something similar.<br>
-Not all Emails can be stored and some fucntions don't work.</strike>
+Not all Emails can be stored and some fucntions don't work.
 
 <h2>Version 1.5</h2>
 Changes: <br>
@@ -45,9 +45,15 @@ Fixed problems with multiprocessing (logging in and sending emails) and some min
 <h2>Version 1.5.6</h2>
 Testing out the tix.Balloon and style feature. No important changes in the program itself.
 
+<h2>Version 1.6.0</h2>
+1. Fixed major bugs.
+2. Added a new Toplevel window to display user information of the selected user in the treeview.
+3. Changed some functions in the DataBase file. Broke up <b>some</b> multitool functions in favour of smaller and more specialized ones.
+4. Small layout changes. More planned.
+
 <h1>Known issues</h1>
-1. Logging in afterwards won't send emails.
-2. After getting the message, that all unsent emails were sent, the program crashes.
+1. <strike>Logging in afterwards won't send emails.</strike> FIXED: The session object couldn't be saved to some variable for unknownreasons
+2. <strike>After getting the message, that all unsent emails were sent, the program crashes.</strike> FIXED: I was using .quit() on Toplevel windows instead of .destroy()
 
 <h1>TO DO</h1>
 1. <strike>Enable saving unsent e-mails to a file/database in case of internet connection loss. (Partially done with 1.4.5)</strike>
@@ -55,3 +61,4 @@ Testing out the tix.Balloon and style feature. No important changes in the progr
 3. Some changes to teh structure of the code and maybe some more features.
 4. Add a log. (Either as a seperate window and as a .txt file)
 5. Add tix.Balloon (hovering frame to display helpful information)
+6. Break up big multitool functions in favour of smaller ones. (A lot of wokr.)
