@@ -10,13 +10,8 @@ from multiprocessing import Process, Queue, freeze_support
 from queue import Empty
 import threading
 
-"""Version 1.6.0
-1. Bug fixes and some additional features.
-2. Added a button that displays all information
-about the current user selected in the treeview.
-3. Added a new function into the DataBase file,
-mainly to seperate some multitool functions.
-4. Slight layout changes in the FirstFrame"""
+"""Version 1.6.1
+Added a seperate window to manually enter the generation indicator of a students index number"""
 
 
 # TO DO
@@ -124,7 +119,7 @@ class Window(ttk.Frame):
 
         # All the ttk.notebook frames
         self.master = master
-        self.master.title("Cirkulacija V1.6.0")
+        self.master.title("Cirkulacija V1.6.1")
         self.init_window() # initializes all the subframes and starts the first frame
 
         self.session = Window.session # stores a Session object to pass around
@@ -326,7 +321,7 @@ class Window(ttk.Frame):
         top.title('O programu')
         top.geometry('250x100')
         top.focus_set()
-        helplist = ['Turbo Cirkulator 3000', 'Verzija: 1.6.0', 'Copyright Milan Todorovic 2016-',
+        helplist = ['Turbo Cirkulator 3000', 'Verzija: 1.6.1', 'Copyright Milan Todorovic 2016-',
                     'Beta testeri: Danijel Milosevic,']
         helpLabels = [ttk.Label(top, text=i) for i in helplist]
         for i in range(0, len(helpLabels)):
@@ -673,7 +668,7 @@ class FirstFrame(Frame):
             for d in takenBooks:
                 tree.insert('', END, values=(d[0], d[1], d[2], d[3], d[4]))
         else:
-            pass
+            messagebox.showerror('Greška', "Morate odabrati nekog korisnika iz liste.")
 
 
 
@@ -819,6 +814,11 @@ class SecondFrame(Frame):
         self.index_e = ttk.Entry(self.p_u, textvariable = self.index)
         self.index.trace("w", lambda *args: self.checkExistance(self.index.get()))
         self.index_e.grid(row = 2, column = 1, sticky = W, padx = 5, pady = 5)
+        index_help = ttk.Label(self.p_u, text='?', font="bold")
+        index_help.grid(row=2, column=3, sticky=W, padx=5, pady=5)
+        index_balloon = tix.Balloon(self.p_u)
+        index_balloon.bind_widget(index_help, balloonmsg='U slučaju da indeks odstupa \nod modela 09*, 10* i 201*'
+                                                        '\nbićete zamoljeni da ručno \nodredite generaciju.')
         ### ID number
         self.id_l = ttk.Label(self.p_u, text = "Br. licne karte:", anchor = W)
         self.id_l.grid(row = 3, column = 0, sticky = W, padx = 5, pady = 5)
@@ -868,30 +868,63 @@ class SecondFrame(Frame):
 
     # Function that adds a user to the DB
     def add_user(self, *args):
+        # the get() method retrieves an empty string if the enrty filed is left empty
         if self.surname.get() == "" or self.user.get() == "" or self.index.get() == "" or self.mail.get() == "":
-            messagebox.showerror("Greska","Ne mozete uneti korisnika bez sledecih informacija:\nime, prezime, indeks, imejl")
+            messagebox.showerror("Greška","Ne možete uneti korisnika bez sledećih podataka:\nime, prezime, indeks, imejl")
         # elif self.surname.get()==None:
         #     messagebox.showerror("Greska", "None greska")
         else:
-            DataBase.data_entry(self.surname.get(), self.user.get(), self.index.get(), self.id.get(),
-                                self.jmbg.get(), self.tel.get(), self.mob.get(), self.mail.get(),
-                                self.street.get(), self.house_nr.get(), self.city.get())
+            generation = DataBase.determine_generation(self.index.get())
+            if generation == 0:
+                w = Toplevel()
+                w.title('Unos generacije studenta')
+                le_strVar = StringVar()
+                le = tix.LabelEntry(w, label='Unesite deo indeksa koji oznacava generaiju: ')
+                le.entry.configure(textvariable = le_strVar)
+                le.pack()
+                b = ttk.Button(w, text='Unesi', command=lambda: self.manualGeneration(le_strVar.get(), w))
+                b.pack()
 
-            self.user_e.delete(0, END)
-            self.surname_e.delete(0, END)
-            self.index_e.delete(0, END)
-            self.id_e.delete(0, END)
-            self.jmbg_e.delete(0, END)
-            self.tel_e.delete(0, END)
-            self.mob_e.delete(0, END)
-            self.mail_e.delete(0, END)
-            self.street_e.delete(0, END)
-            self.house_nr_e.delete(0, END)
-            self.city_e.delete(0, END)
+            else:
+                DataBase.data_entry(self.surname.get(), self.user.get(), self.index.get(), self.id.get(),
+                                    self.jmbg.get(), self.tel.get(), self.mob.get(), self.mail.get(),
+                                    self.street.get(), self.house_nr.get(), self.city.get(), generation)
+
+                self.user_e.delete(0, END)
+                self.surname_e.delete(0, END)
+                self.index_e.delete(0, END)
+                self.id_e.delete(0, END)
+                self.jmbg_e.delete(0, END)
+                self.tel_e.delete(0, END)
+                self.mob_e.delete(0, END)
+                self.mail_e.delete(0, END)
+                self.street_e.delete(0, END)
+                self.house_nr_e.delete(0, END)
+                self.city_e.delete(0, END)
 
     # Checks if certain information in the DB exist (users, books, due books...)
     def checkExistance(self, index=None, *args):
         DataBase.check_Existance("0", index, None)
+
+    def manualGeneration(self, gen, toplevel):
+
+        # print(gen)
+        DataBase.data_entry(self.surname.get(), self.user.get(), self.index.get(), self.id.get(),
+                            self.jmbg.get(), self.tel.get(), self.mob.get(), self.mail.get(),
+                            self.street.get(), self.house_nr.get(), self.city.get(), gen)
+
+        toplevel.destroy()
+        self.user_e.delete(0, END)
+        self.surname_e.delete(0, END)
+        self.index_e.delete(0, END)
+        self.id_e.delete(0, END)
+        self.jmbg_e.delete(0, END)
+        self.tel_e.delete(0, END)
+        self.mob_e.delete(0, END)
+        self.mail_e.delete(0, END)
+        self.street_e.delete(0, END)
+        self.house_nr_e.delete(0, END)
+        self.city_e.delete(0, END)
 
 
 # Subframe for lending a book and book stuff

@@ -17,7 +17,8 @@ def create_table():
     c.execute('CREATE TABLE IF NOT EXISTS dueBooks(index_num TEXT PRIMARY KEY, title TEXT, author TEXT, sign INTEGER, '
               'date_taken TEXT, '
               'date_bring_back TEXT)')
-    c.execute('CREATE TABLE IF NOT EXISTS generations(index_part TEXT UNIQUE, i_value INTEGER PRIMARY KEY AUTOINCREMENT )')
+    # maybe change from autoincrement to MAX(i_value) thingy
+    c.execute('CREATE TABLE IF NOT EXISTS generations(index_part TEXT UNIQUE, i_value INTEGER PRIMARY KEY AUTOINCREMENT)')
     c.execute('CREATE TABLE IF NOT EXISTS lendBookEmails(sign INTEGER PRIMARY KEY)')
     # last three store unsent emails
     c.execute('CREATE TABLE IF NOT EXISTS unsentWarnings(email TEXT, author TEXT, book TEXT, sign INTEGER, '
@@ -29,20 +30,16 @@ def create_table():
     conn.close()
 
 def data_entry(surname, name, index_num, id_num, jmbg,
-               tel, mob, email, street, house_num, city):
+               tel, mob, email, street, house_num, city, gen):
 
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
 
-    if index_num.startswith('0') or index_num.startswith('1'):
-        c.execute('INSERT OR IGNORE INTO generations(index_part) VALUES(?)', (index_num[:2],))
-        ivalue=c.execute('SELECT i_value FROM generations WHERE index_part = ?', (index_num[:2],)).fetchone()[0]
-    elif index_num.startswith('2'):
-        c.execute('INSERT OR IGNORE INTO generations(index_part) VALUES(?)', (index_num[:4],))
-        ivalue=c.execute('SELECT i_value FROM generations WHERE index_part = ?', (index_num[:4],)).fetchone()[0]
-    else:
-        ivalue=0
-
+    # gen is either returned from determine_generation (through some functions in Main.py),
+    # if found, or manually enetred by the user
+    # print(gen)
+    c.execute('INSERT OR IGNORE INTO generations(index_part, i_value) VALUES(?, ?)', (gen,))
+    ivalue = c.execute('SELECT i_value FROM generations WHERE index_part = ?', (gen,)).fetchone()[0]
 
     c.execute('INSERT INTO cirkStudents(surname, name, index_num, id_num, jmbg, telephone, mobile, email, i_value)'
               'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', (surname, name, index_num, id_num, jmbg, tel, mob, email, ivalue))
@@ -54,6 +51,24 @@ def data_entry(surname, name, index_num, id_num, jmbg,
     messagebox.showinfo("Obaveštenje", "Korisnik uspešno unet:\n"+str(name)+" "+str(surname))
     c.close()
     conn.close()
+
+def determine_generation(index_num):
+
+    conn = sqlite3.connect('cirkulacija.db')
+    c = conn.cursor()
+
+    if index_num.startswith('0') or index_num.startswith('1'):
+        c.execute('INSERT OR IGNORE INTO generations(index_part) VALUES(?)', (index_num[:2],))
+        ivalue = c.execute('SELECT i_value FROM generations WHERE index_part = ?', (index_num[:2],)).fetchone()[0]
+    elif index_num.startswith('2'):
+        c.execute('INSERT OR IGNORE INTO generations(index_part) VALUES(?)', (index_num[:4],))
+        ivalue = c.execute('SELECT i_value FROM generations WHERE index_part = ?', (index_num[:4],)).fetchone()[0]
+    else:
+        ivalue = 0
+
+    c.close()
+    conn.close()
+    return ivalue
 
 def take_a_book(index_num, title, author, sign, days):
 
@@ -192,6 +207,7 @@ def read_db(index_num=None, name_db = None, surname_db = None, city_db = None, a
     return new_data # Returns data
 
 def readLendBoosk(index):
+
     conn = sqlite3.connect('cirkulacija.db')
     c = conn.cursor()
 
