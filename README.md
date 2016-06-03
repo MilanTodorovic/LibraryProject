@@ -51,6 +51,11 @@ Testing out the tix.Balloon and style feature. No important changes in the progr
 3. Changed some functions in the DataBase file. Broke up <b>some</b> multitool functions in favour of smaller and more specialized ones.
 4. Small layout changes. More planned.
 
+<h2>Version 1.6.1</h2>
+1. Added a seperate window to manually enter the generation indicator of a students index number.
+2. Split some functions in the DataBase file to make it more readable.
+3. Some other minor changes which don't have any impact to the program itself.
+
 <h1>Known issues</h1>
 1. <strike>Logging in afterwards won't send emails.</strike> <br>FIXED: The session object couldn't be saved to a variable for unknown reasons
 2. <strike>After getting the message, that all unsent emails were sent, the program crashes.</strike> <br>FIXED: I was using .quit() on Toplevel windows instead of .destroy()
