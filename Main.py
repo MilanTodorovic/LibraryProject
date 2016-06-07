@@ -385,10 +385,9 @@ class FirstFrame(Frame):
         self.drop_down = OptionMenu(self, self.store_selection,*self.tableList)
         self.drop_down.grid(row = 0, column = 1)
 
-        # Entries
+        '''Frame layout'''
         # Left side
-        ## Name
-        ### Textvariable
+        ## Textvariable
         self.searchIndex = StringVar()
         self.searchName = StringVar()
         self.searchSurname = StringVar()
@@ -407,6 +406,7 @@ class FirstFrame(Frame):
         self.e_name.focus()
         # self.e_name_help = ttk.Label(self.p_iw, text = "Upozorenje", width = 15, anchor = W)
         # self.e_name_help.grid(row = 1, column = 2, padx=10, pady=10)
+
         ## Surname
         self.l_sur = ttk.Label(self.p_iw, text = "Prezime:", width = 10, anchor = W)
         self.l_sur.grid(row = 2, column = 0, padx = 5, pady = 5)
@@ -770,7 +770,9 @@ class SecondFrame(Frame):
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.master = master
+        global new_photo
         self.add_user_window()
+
 
     # Frame that hosts all widgets
     def add_user_window(self, *args):
@@ -814,7 +816,8 @@ class SecondFrame(Frame):
         self.index_e = ttk.Entry(self.p_u, textvariable = self.index)
         self.index.trace("w", lambda *args: self.checkExistance(self.index.get()))
         self.index_e.grid(row = 2, column = 1, sticky = W, padx = 5, pady = 5)
-        index_help = ttk.Label(self.p_u, text='?', font="bold")
+        index_help = ttk.Label(self.p_u, image=new_photo)
+        index_help.image= new_photo
         index_help.grid(row=2, column=3, sticky=W, padx=5, pady=5)
         index_balloon = tix.Balloon(self.p_u)
         index_balloon.bind_widget(index_help, balloonmsg='U slučaju da indeks odstupa \nod modela 09*, 10* i 201*'
@@ -934,6 +937,7 @@ class ThirdFrame(Frame):
         Frame.__init__(self, master)
         self.master = master
         self.session = Window.session
+        global new_photo
         self.takeAbook()
 
     # Frame that hosts all widgets
@@ -1022,12 +1026,16 @@ class ThirdFrame(Frame):
         self.date_l_db.grid(row=2, column=1, padx=5, pady=5)
         self.new_date = ttk.Label(self.p1_b, text="Novi datum:", anchor=W)
         self.new_date.grid(row=3,column=0, sticky=W, padx=5, pady=5)
-        new_date_help = tix.Balloon(self.p1_b)
-        new_date_help.bind_widget(self.new_date,
-                                  balloonmsg='Ovaj datum ce biti unet u bazu podataka kao datum uzimanja.\n'
-                                             'Knjiga se automatski produzava na 14 dana.')
         self.new_date_1 = ttk.Label(self.p1_b, text=str(datetime.date.today().strftime("%d-%m-%Y")), anchor=W)
         self.new_date_1.grid(row=3, column=1, padx=5, pady=5)
+
+        new_date_help = ttk.Label(self.p1_b, image=new_photo)
+        new_date_help.photo= new_photo
+        new_date_help.grid(row=3, column=2, padx=5, pady=5)
+        new_date_help_b = tix.Balloon(self.p1_b)
+        new_date_help_b.bind_widget(new_date_help,
+                                  balloonmsg='Ovaj datum će biti unet u bazu podataka kao datum uzimanja.\n'
+                                             'Knjiga se automatski produžava na 14 dana.')
 
         self.button_u_date = ttk.Button(self.p1_b, text="Produži", command = lambda: self.updateTables("1"), width=15)
         self.button_u_date.grid(row = 4, column = 2, sticky = NSEW, padx = 5, pady = 5)
@@ -1153,6 +1161,7 @@ class ForthFrame(Frame):
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.master = master
+        global new_photo
         self.update_table()
 
     def update_table(self):
@@ -1190,7 +1199,8 @@ class ForthFrame(Frame):
         # the lambda function is located at the bottom of the script
         self.button_ut.grid(row = 5, column = 3, sticky = NSEW, padx = 5, pady = 5)
 
-        index_info = ttk.Label(self.p_ut, text='?', font='bold')
+        index_info = ttk.Label(self.p_ut, image=new_photo)
+        index_info.image= new_photo
         index_info.grid(row=0, column=2, padx=5, pady=5, sticky=W)
         tix_balloon_index_info = tix.Balloon(self.p_ut)
         tix_balloon_index_info.bind_widget(index_info, balloonmsg = 'Indeks se ne moze ipravljati ovim putem.')
@@ -1574,6 +1584,7 @@ if __name__ == '__main__':
     freeze_support() # if I ever decide to use CX_freeze, to make multiprocesses work as exe
     login = Tk()
     login.geometry('300x140')
+    login.iconbitmap(default='hq_logo_icon.ico')
     lg = Login(login)
     login.mainloop()
     # this part was because of some serious errors, dunno if it is needed any longer
@@ -1589,8 +1600,11 @@ if __name__ == '__main__':
     root = tix.Tk()
     root.geometry("920x580")
     root.resizable(width=FALSE, height=FALSE)
+    root.iconbitmap(default='hq_logo_icon.ico')
     # DataBase.deleteTables()
     # DataBase.create_table()
+    photo = PhotoImage(file='help.png')
+    new_photo = photo.subsample(30, 30)
     app = Window(root) # root se prosledjuje u __init__ i zauzima mesto master
     root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
