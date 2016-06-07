@@ -64,7 +64,7 @@ Testing out the tix.Balloon and style feature. No important changes in the progr
 1. <strike>Enable saving unsent e-mails to a file/database in case of internet connection loss. (Partially done with 1.4.5)</strike>
 2. Changes in variable names. (Make them more readable and informative)
 3. Some changes to teh structure of the code and maybe some more features.
-4. Add a log. (Either as a seperate window and as a .txt file)
+4. Add a log. (Either as a seperate window and as a .txt file)<br>
 <strike>5. Add tix.Balloon (hovering frame to display helpful information)</strike> (maybe i will add some more)
-6. Break up big multitool functions in favour of smaller ones. (A lot of wokr.)
+6. Break up big multitool functions in favour of smaller ones. (A lot of wokr.)<br>
 <strike>7. Add a custom icon to the window. (self.iconbitmap(self, default='icon.ico'))</strike>
