@@ -66,5 +66,5 @@ Testing out the tix.Balloon and style feature. No important changes in the progr
 3. Some changes to the structure of the code and maybe some more features.<br>
 4. Add a log. (Either as a seperate window and as a .txt file)<br>
 5. <strike>Add tix.Balloon (hovering frame to display helpful information)</strike> (maybe i will add some more)<br>
-6. Break up big multitool functions in favour of smaller ones. (A lot of wokr.)<br>
+6. Break up big multitool functions in favour of smaller ones. (A lot of work.)<br>
 7. <strike>Add a custom icon to the window. (self.iconbitmap(self, default='icon.ico')</strike><br>
