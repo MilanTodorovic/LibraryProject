@@ -57,7 +57,7 @@ Testing out the tix.Balloon and style feature. No important changes in the progr
 3. Some other minor changes which don't have any impact to the program itself.
 
 <h1>Known issues</h1>
-1. <strike>Logging in afterwards won't send emails.</strike> <br>FIXED: The session object couldn't be saved to a variable for unknown reasons
+1. <strike>Logging in afterwards won't send emails.</strike> <br>FIXED: The session object couldn't be saved to a variable for unknown reasons<br>
 2. <strike>After getting the message, that all unsent emails were sent, the program crashes.</strike> <br>FIXED: I was using .quit() on Toplevel windows instead of .destroy()
 
 <h1>TO DO</h1>
@@ -67,4 +67,4 @@ Testing out the tix.Balloon and style feature. No important changes in the progr
 4. Add a log. (Either as a seperate window and as a .txt file)<br>
 5. <strike>Add tix.Balloon (hovering frame to display helpful information)</strike> (maybe i will add some more)<br>
 6. Break up big multitool functions in favour of smaller ones. (A lot of wokr.)<br>
-7. <strike>Add a custom icon to the window. (self.iconbitmap(self, default='icon.ico'))</strike><br>
+7. <strike>Add a custom icon to the window. (self.iconbitmap(self, default='icon.ico')</strike><br>
