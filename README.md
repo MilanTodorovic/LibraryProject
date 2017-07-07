@@ -46,15 +46,15 @@ Fixed problems with multiprocessing (logging in and sending emails) and some min
 Testing out the tix.Balloon and style feature. No important changes in the program itself.
 
 <h2>Version 1.6.0</h2>
-1. Fixed major bugs.
-2. Added a new Toplevel window to display user information of the selected user in the treeview.
-3. Changed some functions in the DataBase file. Broke up <b>some</b> multitool functions in favour of smaller and more specialized ones.
+1. Fixed major bugs.<br>
+2. Added a new Toplevel window to display user information of the selected user in the treeview.<br>
+3. Changed some functions in the DataBase file. Broke up <b>some</b> multitool functions in favour of smaller and more specialized ones.<br>
 4. Small layout changes. More planned.
 
 <h2>Version 1.6.1</h2>
-1. Added a seperate window to manually enter the generation indicator of a students index number.
-2. Split some functions in the DataBase file to make it more readable.
-3. Some other minor changes which don't have any impact to the program itself.
+1. Added a seperate window to manually enter the generation indicator of a students index number.<br>
+2. Split some functions in the DataBase file to make it more readable.<br>
+3. Some other minor changes which don't have any impact to the program itself.<br>
 
 <h1>Known issues</h1>
 1. <strike>Logging in afterwards won't send emails.</strike> <br>FIXED: The session object couldn't be saved to a variable for unknown reasons<br>
